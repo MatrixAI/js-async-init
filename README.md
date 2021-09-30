@@ -2,7 +2,7 @@
 
 [![pipeline status](https://gitlab.com/MatrixAI/open-source/js-async-init/badges/master/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-async-init/commits/master)
 
-Asynchronous initialisation and deinitilisation decorators for JavaScript/TypeScript applications.
+Asynchronous initialization and deinitialization decorators for JavaScript/TypeScript applications.
 
 Because decorators are experimental, you must enable: `"experimentalDecorators": true` in your `tsconfig.json` to use this library.
 
