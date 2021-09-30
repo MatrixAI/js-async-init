@@ -121,7 +121,7 @@ npm run lintfix
 npm run docs
 ```
 
-See the docs at: https://matrixai.github.io/TypeScript-Demo-Lib/
+See the docs at: https://matrixai.github.io/js-async-init/
 
 ### Publishing
 
