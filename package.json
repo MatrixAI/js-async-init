@@ -8,12 +8,13 @@
     "type": "git",
     "url": "https://github.com/MatrixAI/js-async-init.git"
   },
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    "create-destroy-start-stop": "./dist/CreateDestroyStartStop.js",
-    "create-destroy": "./dist/CreateDestroy.js",
-    "start-stop": "./dist/StartStop.js"
+    "./create-destroy-start-stop": "./dist/CreateDestroyStartStop.js",
+    "./create-destroy": "./dist/CreateDestroy.js",
+    "./start-stop": "./dist/StartStop.js"
   },
   "scripts": {
     "build": "tsc -p ./tsconfig.build.json",
