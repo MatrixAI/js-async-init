@@ -4,11 +4,14 @@
 
 Asynchronous initialisation and deinitilisation decorators for JavaScript/TypeScript applications.
 
+Because decorators are experimental, you must enable: `"experimentalDecorators": true` in your `tsconfig.json` to use this library.
+
 Example Usage:
 
 ```ts
 import { CreateDestroyStartStop, ready } from '@matrixai/async-init/dist/CreateDestroyStartStop';
 
+// this hack is necessary to ensure that X's type is decorated
 interface X extends CreateDestroyStartStop {};
 @CreateDestroyStartStop(new Error('Running'), new Error('Destroyed'))
 class X {
@@ -53,6 +56,7 @@ class X {
   }
 }
 
+// this hack is necessary to ensure that Y's type is decorated
 interface Y extends CreateDestroyStartStop {};
 @CreateDestroyStartStop(new Error('Running'), new Error('Destroyed'))
 class Y {
