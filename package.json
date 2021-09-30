@@ -1,6 +1,6 @@
 {
   "name": "@matrixai/async-init",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "author": "Roger Qiu",
   "description": "Asynchronous Initialisation and Deinitialisation Decorators",
   "license": "Apache-2.0",
