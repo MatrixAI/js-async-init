@@ -62,10 +62,12 @@
 					<h1>js-async-init</h1>
 				</a>
 				<p><a href="https://gitlab.com/MatrixAI/open-source/js-async-init/commits/master"><img src="https://gitlab.com/MatrixAI/open-source/js-async-init/badges/master/pipeline.svg" alt="pipeline status"></a></p>
-				<p>Asynchronous initialisation and deinitilisation decorators for JavaScript/TypeScript applications.</p>
+				<p>Asynchronous initialization and deinitialization decorators for JavaScript/TypeScript applications.</p>
+				<p>Because decorators are experimental, you must enable: <code>&quot;experimentalDecorators&quot;: true</code> in your <code>tsconfig.json</code> to use this library.</p>
 				<p>Example Usage:</p>
 				<pre><code class="language-ts"><span style="color: #AF00DB">import</span><span style="color: #000000"> { </span><span style="color: #001080">CreateDestroyStartStop</span><span style="color: #000000">, </span><span style="color: #001080">ready</span><span style="color: #000000"> } </span><span style="color: #AF00DB">from</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;@matrixai/async-init/dist/CreateDestroyStartStop&#039;</span><span style="color: #000000">;</span>
 
+<span style="color: #008000">// this hack is necessary to ensure that X&#039;s type is decorated</span>
 <span style="color: #0000FF">interface</span><span style="color: #000000"> </span><span style="color: #267F99">X</span><span style="color: #000000"> </span><span style="color: #0000FF">extends</span><span style="color: #000000"> </span><span style="color: #267F99">CreateDestroyStartStop</span><span style="color: #000000"> {};</span>
 <span style="color: #000000">@</span><span style="color: #795E26">CreateDestroyStartStop</span><span style="color: #000000">(</span><span style="color: #0000FF">new</span><span style="color: #000000"> </span><span style="color: #267F99">Error</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;Running&#039;</span><span style="color: #000000">), </span><span style="color: #0000FF">new</span><span style="color: #000000"> </span><span style="color: #267F99">Error</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;Destroyed&#039;</span><span style="color: #000000">))</span>
 <span style="color: #0000FF">class</span><span style="color: #000000"> </span><span style="color: #267F99">X</span><span style="color: #000000"> {</span>
@@ -110,6 +112,7 @@
 <span style="color: #000000">  }</span>
 <span style="color: #000000">}</span>
 
+<span style="color: #008000">// this hack is necessary to ensure that Y&#039;s type is decorated</span>
 <span style="color: #0000FF">interface</span><span style="color: #000000"> </span><span style="color: #267F99">Y</span><span style="color: #000000"> </span><span style="color: #0000FF">extends</span><span style="color: #000000"> </span><span style="color: #267F99">CreateDestroyStartStop</span><span style="color: #000000"> {};</span>
 <span style="color: #000000">@</span><span style="color: #795E26">CreateDestroyStartStop</span><span style="color: #000000">(</span><span style="color: #0000FF">new</span><span style="color: #000000"> </span><span style="color: #267F99">Error</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;Running&#039;</span><span style="color: #000000">), </span><span style="color: #0000FF">new</span><span style="color: #000000"> </span><span style="color: #267F99">Error</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;Destroyed&#039;</span><span style="color: #000000">))</span>
 <span style="color: #0000FF">class</span><span style="color: #000000"> </span><span style="color: #267F99">Y</span><span style="color: #000000"> {</span>
@@ -141,6 +144,7 @@
 <span style="color: #795E26">main</span><span style="color: #000000">();</span>
 </code></pre>
 				<p>Note that it is unsafe to call the create, destroy, start and stop methods concurrently with other method calls. There is no concurrency control. Instead a simple method of making the methods idempotent is used.</p>
+				<p>Refer to <a href="https://gist.github.com/CMCDragonkai/1dbf5069d9efc11585c27cc774271584">https://gist.github.com/CMCDragonkai/1dbf5069d9efc11585c27cc774271584</a> for further the motivation of this library.</p>
 				<a href="#installation" id="installation" style="color: inherit; text-decoration: none;">
 					<h2>Installation</h2>
 				</a>
@@ -168,7 +172,7 @@
 				</a>
 				<pre><code class="language-sh"><span style="color: #000000">npm run docs</span>
 </code></pre>
-				<p>See the docs at: <a href="https://matrixai.github.io/TypeScript-Demo-Lib/">https://matrixai.github.io/TypeScript-Demo-Lib/</a></p>
+				<p>See the docs at: <a href="https://matrixai.github.io/js-async-init/">https://matrixai.github.io/js-async-init/</a></p>
 				<a href="#publishing" id="publishing" style="color: inherit; text-decoration: none;">
 					<h3>Publishing</h3>
 				</a>
