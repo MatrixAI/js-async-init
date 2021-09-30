@@ -90,6 +90,8 @@ main();
 
 Note that it is unsafe to call the create, destroy, start and stop methods concurrently with other method calls. There is no concurrency control. Instead a simple method of making the methods idempotent is used.
 
+Refer to https://gist.github.com/CMCDragonkai/1dbf5069d9efc11585c27cc774271584 for further the motivation of this library.
+
 ## Installation
 
 ```sh
