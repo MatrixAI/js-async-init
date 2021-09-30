@@ -1,4 +1,4 @@
-import CreateDestroyStartStop, { ready } from '@/CreateDestroyStartStop';
+import { CreateDestroyStartStop, ready } from '@/CreateDestroyStartStop';
 import {
   ErrorAsyncInitDestroyed,
   ErrorAsyncInitNotRunning,

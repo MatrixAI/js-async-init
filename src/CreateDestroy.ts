@@ -86,8 +86,4 @@ function ready(errorDestroyed: Error = new ErrorAsyncInitDestroyed()) {
   };
 }
 
-export default CreateDestroy;
-
-export { ready };
-
-export type { CreateDestroy };
+export { CreateDestroy, ready };

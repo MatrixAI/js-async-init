@@ -1,4 +1,4 @@
-import StartStop, { ready } from '@/CreateDestroyStartStop';
+import { StartStop, ready } from '@/StartStop';
 import { ErrorAsyncInitNotRunning } from '@/errors';
 
 describe('StartStop', () => {

@@ -12,7 +12,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "module": "ES2020",
+    "module": "CommonJS",
     "target": "ES2020",
     "baseUrl": "./src",
     "paths": {

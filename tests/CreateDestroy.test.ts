@@ -1,4 +1,4 @@
-import CreateDestroy, { ready } from '@/CreateDestroy';
+import { CreateDestroy, ready } from '@/CreateDestroy';
 import { ErrorAsyncInitDestroyed } from '@/errors';
 
 describe('CreateDestroy', () => {

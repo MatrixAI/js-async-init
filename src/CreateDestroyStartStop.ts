@@ -144,8 +144,4 @@ function ready(errorNotRunning: Error = new ErrorAsyncInitNotRunning()) {
   };
 }
 
-export default CreateDestroyStartStop;
-
-export { ready };
-
-export type { CreateDestroyStartStop };
+export { CreateDestroyStartStop, ready };

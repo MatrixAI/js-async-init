@@ -103,8 +103,4 @@ function ready(errorNotRunning: Error = new ErrorAsyncInitNotRunning()) {
   };
 }
 
-export default StartStop;
-
-export { ready };
-
-export type { StartStop };
+export { StartStop, ready };

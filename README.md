@@ -7,7 +7,7 @@ Asynchronous initialisation and deinitilisation decorators for JavaScript/TypeSc
 Example Usage:
 
 ```ts
-import CreateDestroyStartStop, { ready } from '@matrixai/async-init/create-destroy-start-stop';
+import { CreateDestroyStartStop, ready } from '@matrixai/async-init/dist/CreateDestroyStartStop';
 
 interface X extends CreateDestroyStartStop {};
 @CreateDestroyStartStop(new Error('Running'), new Error('Destroyed'))
