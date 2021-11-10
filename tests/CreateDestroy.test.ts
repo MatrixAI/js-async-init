@@ -216,6 +216,39 @@ describe('CreateDestroy', () => {
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitDestroyed);
   });
+  test('calling getters and setters throws running exceptions when not running', async () => {
+    const aMock = jest.fn();
+    const bMock = jest.fn();
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      protected _b: any;
+
+      @ready()
+      get a() {
+        aMock();
+        return 'a';
+      }
+
+      @ready()
+      set b(v: any) {
+        bMock();
+        this._b = v;
+      }
+    }
+    const x = new X();
+    const b = x.a;
+    x.b = b;
+    // Ready
+    expect(aMock.mock.calls.length).toBe(1);
+    expect(bMock.mock.calls.length).toBe(1);
+    await x.destroy();
+    // Not ready
+    expect(() => x.a).toThrow(ErrorAsyncInitDestroyed);
+    expect(() => {
+      x.b = 3;
+    }).toThrow(ErrorAsyncInitDestroyed);
+  });
   test('custom running, not running and destroyed exceptions', async () => {
     const errorDestroyed = new Error('destroyed');
     interface X extends CreateDestroy {}

@@ -99,6 +99,45 @@ describe('StartStop', () => {
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitNotRunning);
   });
+  test('calling getters and setters throws running exceptions when not ready', async () => {
+    const aMock = jest.fn();
+    const bMock = jest.fn();
+    interface X extends StartStop {}
+    @StartStop()
+    class X {
+      protected _b: any;
+
+      @ready()
+      get a() {
+        aMock();
+        return 'a';
+      }
+
+      @ready()
+      set b(v: any) {
+        bMock();
+        this._b = v;
+      }
+    }
+    const x = new X();
+    // Not ready
+    expect(() => x.a).toThrow(ErrorAsyncInitNotRunning);
+    expect(() => {
+      x.b = 3;
+    }).toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    // Ready
+    const b = x.a;
+    x.b = b;
+    expect(aMock.mock.calls.length).toBe(1);
+    expect(bMock.mock.calls.length).toBe(1);
+    await x.stop();
+    // Not ready
+    expect(() => x.a).toThrow(ErrorAsyncInitNotRunning);
+    expect(() => {
+      x.b = 3;
+    }).toThrow(ErrorAsyncInitNotRunning);
+  });
   test('custom running, not running and destroyed exceptions', async () => {
     const errorNotRunning = new Error('not running');
     interface X extends StartStop {}

@@ -47,33 +47,41 @@ function CreateDestroy() {
 
 function ready(errorDestroyed: Error = new ErrorAsyncInitDestroyed()) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
-    const f = descriptor.value;
+    let kind;
+    if (descriptor.value != null) {
+      kind = 'value';
+    } else if (descriptor.get != null) {
+      kind = 'get';
+    } else if (descriptor.set != null) {
+      kind = 'set';
+    }
+    const f: Function = descriptor[kind];
     if (typeof f !== 'function') {
       throw new TypeError(`${key} is not a function`);
     }
-    if (descriptor.value instanceof AsyncFunction) {
-      descriptor.value = async function (...args) {
+    if (f instanceof AsyncFunction) {
+      descriptor[kind] = async function (...args) {
         if (this._destroyed) {
           throw errorDestroyed;
         }
         return f.apply(this, args);
       };
-    } else if (descriptor.value instanceof GeneratorFunction) {
-      descriptor.value = function* (...args) {
+    } else if (f instanceof GeneratorFunction) {
+      descriptor[kind] = function* (...args) {
         if (this._destroyed) {
           throw errorDestroyed;
         }
         yield* f.apply(this, args);
       };
-    } else if (descriptor.value instanceof AsyncGeneratorFunction) {
-      descriptor.value = async function* (...args) {
+    } else if (f instanceof AsyncGeneratorFunction) {
+      descriptor[kind] = async function* (...args) {
         if (this._destroyed) {
           throw errorDestroyed;
         }
         yield* f.apply(this, args);
       };
     } else {
-      descriptor.value = function (...args) {
+      descriptor[kind] = function (...args) {
         if (this._destroyed) {
           throw errorDestroyed;
         }
@@ -81,7 +89,7 @@ function ready(errorDestroyed: Error = new ErrorAsyncInitDestroyed()) {
       };
     }
     // Preserve the name
-    Object.defineProperty(descriptor.value, 'name', { value: key });
+    Object.defineProperty(descriptor[kind], 'name', { value: key });
     return descriptor;
   };
 }
