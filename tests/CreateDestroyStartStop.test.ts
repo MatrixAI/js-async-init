@@ -56,6 +56,215 @@ describe('CreateDestroyStartStop', () => {
     await x.destroy();
     expect(destroyMock.mock.calls.length).toBe(1);
   });
+  test('creates, destroys, starts and stops for parent class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const startMock = jest.fn();
+    const stopMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    // Decorator on parent but not on child
+    // decorator cannot be used on both parent and child
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      public static async createX() {
+        createMock();
+        const x = new X();
+        await x.start();
+        return x;
+      }
+
+      public constructor() {
+        constructorMock();
+      }
+
+      public async start(): Promise<void> {
+        startMock();
+      }
+
+      public async stop(): Promise<void> {
+        stopMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      @ready()
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        const y = new Y();
+        await y.start();
+        return y;
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+    }
+    const y = await Y.createY();
+    await y.start(); // Idiomatically should be a noop
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    expect(startMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.stop();
+    expect(stopMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
+  test('creates, destroys, starts and stops for child class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const startMock = jest.fn();
+    const stopMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    // Decorator on child but not on parent
+    // decorator cannot be used on both parent and child
+    class X {
+      public static async createX() {
+        createMock();
+        const x = new X();
+        await x.start();
+        return x;
+      }
+
+      public constructor() {
+        constructorMock();
+      }
+
+      public async start(): Promise<void> {
+        startMock();
+      }
+
+      public async stop(): Promise<void> {
+        stopMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    interface Y extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        const y = new Y();
+        await y.start();
+        return y;
+      }
+
+      public async start() {
+        return await super.start();
+      }
+
+      public async stop() {
+        return await super.stop();
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+
+      @ready()
+      public async doSomething() {
+        return super.doSomething();
+      }
+    }
+    const y = await Y.createY();
+    await y.start(); // Idiomatically should be a noop
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    expect(startMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.stop();
+    expect(stopMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
+  test('creates, destroys, starts and stops for derived abstract class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const startMock = jest.fn();
+    const stopMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    // Decorator on child but not on parent
+    // decorator cannot be used on both parent and child
+    abstract class X {
+      public constructor() {
+        constructorMock();
+      }
+
+      public async start(): Promise<void> {
+        startMock();
+      }
+
+      public async stop(): Promise<void> {
+        stopMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    interface Y extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        const y = new Y();
+        await y.start();
+        return y;
+      }
+
+      public async start() {
+        return await super.start();
+      }
+
+      public async stop() {
+        return await super.stop();
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+
+      @ready()
+      public async doSomething() {
+        return super.doSomething();
+      }
+    }
+    const y = await Y.createY();
+    await y.start(); // Idiomatically should be a noop
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    expect(startMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.stop();
+    expect(stopMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
   test('calling methods throws running exceptions when not ready', async () => {
     const doSomethingSyncMock = jest.fn();
     const doSomethingAsyncMock = jest.fn();

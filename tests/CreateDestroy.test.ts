@@ -36,6 +36,135 @@ describe('CreateDestroy', () => {
     await x.destroy();
     expect(destroyMock.mock.calls.length).toBe(1);
   });
+  test('creates, destroys for parent class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    // Decorator on parent but not on child
+    // decorator cannot be used on both parent and child
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      public constructor() {
+        constructorMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      @ready()
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        return new Y();
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+    }
+    const y = await Y.createY();
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
+  test('creates, destroys for child class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    // Decorator on child but not on parent
+    // decorator cannot be used on both parent and child
+    class X {
+      public constructor() {
+        constructorMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    interface Y extends CreateDestroy {}
+    @CreateDestroy()
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        return new Y();
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+
+      @ready()
+      public async doSomething() {
+        return super.doSomething();
+      }
+    }
+    const y = await Y.createY();
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
+  test('creates, destroys for derived abstract class', async () => {
+    const createMock = jest.fn();
+    const constructorMock = jest.fn();
+    const destroyMock = jest.fn();
+    const doSomethingMock = jest.fn();
+    abstract class X {
+      public constructor() {
+        constructorMock();
+      }
+
+      public async destroy(): Promise<void> {
+        destroyMock();
+      }
+
+      public async doSomething() {
+        doSomethingMock();
+      }
+    }
+    interface Y extends CreateDestroy {}
+    @CreateDestroy()
+    class Y extends X {
+      public static async createY() {
+        createMock();
+        return new Y();
+      }
+
+      public async destroy(): Promise<void> {
+        return await super.destroy();
+      }
+
+      @ready()
+      public async doSomething() {
+        return super.doSomething();
+      }
+    }
+    const y = await Y.createY();
+    expect(createMock.mock.calls.length).toBe(1);
+    expect(constructorMock.mock.calls.length).toBe(1);
+    await y.doSomething();
+    expect(doSomethingMock.mock.calls.length).toBe(1);
+    await y.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+  });
   test('calling methods throws running exceptions when not ready', async () => {
     const doSomethingSyncMock = jest.fn();
     const doSomethingAsyncMock = jest.fn();
