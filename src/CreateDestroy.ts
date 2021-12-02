@@ -7,14 +7,14 @@ import { ErrorAsyncInitDestroyed } from './errors';
 
 interface CreateDestroy {
   get destroyed(): boolean;
-  destroy(...args: Array<any>): Promise<void>;
+  destroy(...args: Array<any>): Promise<any>;
 }
 
 function CreateDestroy() {
   return <
     T extends {
       new (...args: any[]): {
-        destroy?(...args: Array<any>): Promise<void>;
+        destroy?(...args: Array<any>): Promise<any>;
       };
     },
   >(
@@ -27,14 +27,14 @@ function CreateDestroy() {
         return this._destroyed;
       }
 
-      public async destroy(...args: Array<any>): Promise<void> {
+      public async destroy(...args: Array<any>): Promise<any> {
         try {
           if (this._destroyed) {
             return;
           }
           this._destroyed = true;
           if (typeof super['destroy'] === 'function') {
-            await super.destroy(...args);
+            return await super.destroy(...args);
           }
         } catch (e) {
           this._destroyed = false;

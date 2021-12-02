@@ -12,9 +12,9 @@ import {
 interface CreateDestroyStartStop {
   get running(): boolean;
   get destroyed(): boolean;
-  start(...args: Array<any>): Promise<void>;
-  stop(...args: Array<any>): Promise<void>;
-  destroy(...args: Array<any>): Promise<void>;
+  start(...args: Array<any>): Promise<any>;
+  stop(...args: Array<any>): Promise<any>;
+  destroy(...args: Array<any>): Promise<any>;
 }
 
 function CreateDestroyStartStop(
@@ -24,9 +24,9 @@ function CreateDestroyStartStop(
   return <
     T extends {
       new (...args: any[]): {
-        start?(...args: Array<any>): Promise<void>;
-        stop?(...args: Array<any>): Promise<void>;
-        destroy?(...args: Array<any>): Promise<void>;
+        start?(...args: Array<any>): Promise<any>;
+        stop?(...args: Array<any>): Promise<any>;
+        destroy?(...args: Array<any>): Promise<any>;
       };
     },
   >(
@@ -44,7 +44,7 @@ function CreateDestroyStartStop(
         return this._destroyed;
       }
 
-      public async destroy(...args: Array<any>): Promise<void> {
+      public async destroy(...args: Array<any>): Promise<any> {
         try {
           if (this._destroyed) {
             return;
@@ -54,7 +54,7 @@ function CreateDestroyStartStop(
           }
           this._destroyed = true;
           if (typeof super['destroy'] === 'function') {
-            await super.destroy(...args);
+            return await super.destroy(...args);
           }
         } catch (e) {
           this._destroyed = false;
@@ -62,7 +62,7 @@ function CreateDestroyStartStop(
         }
       }
 
-      public async start(...args: Array<any>): Promise<void> {
+      public async start(...args: Array<any>): Promise<any> {
         try {
           if (this._running) {
             return;
@@ -72,7 +72,7 @@ function CreateDestroyStartStop(
           }
           this._running = true;
           if (typeof super['start'] === 'function') {
-            await super.start(...args);
+            return await super.start(...args);
           }
         } catch (e) {
           this._running = false;
@@ -80,7 +80,7 @@ function CreateDestroyStartStop(
         }
       }
 
-      public async stop(...args: Array<any>): Promise<void> {
+      public async stop(...args: Array<any>): Promise<any> {
         try {
           if (!this._running) {
             return;
@@ -92,7 +92,7 @@ function CreateDestroyStartStop(
           }
           this._running = false;
           if (typeof super['stop'] === 'function') {
-            await super.stop(...args);
+            return await super.stop(...args);
           }
         } catch (e) {
           this._running = true;
