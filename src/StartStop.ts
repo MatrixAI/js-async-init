@@ -7,16 +7,16 @@ import { ErrorAsyncInitNotRunning } from './errors';
 
 interface StartStop {
   get running(): boolean;
-  start(...args: Array<any>): Promise<void>;
-  stop(...args: Array<any>): Promise<void>;
+  start(...args: Array<any>): Promise<any>;
+  stop(...args: Array<any>): Promise<any>;
 }
 
 function StartStop() {
   return <
     T extends {
       new (...args: any[]): {
-        start?(...args: Array<any>): Promise<void>;
-        stop?(...args: Array<any>): Promise<void>;
+        start?(...args: Array<any>): Promise<any>;
+        stop?(...args: Array<any>): Promise<any>;
       };
     },
   >(
@@ -29,14 +29,14 @@ function StartStop() {
         return this._running;
       }
 
-      public async start(...args: Array<any>): Promise<void> {
+      public async start(...args: Array<any>): Promise<any> {
         try {
           if (this._running) {
             return;
           }
           this._running = true;
           if (typeof super['start'] === 'function') {
-            await super.start(...args);
+            return await super.start(...args);
           }
         } catch (e) {
           this._running = false;
@@ -44,14 +44,14 @@ function StartStop() {
         }
       }
 
-      public async stop(...args: Array<any>) {
+      public async stop(...args: Array<any>): Promise<any> {
         try {
           if (!this._running) {
             return;
           }
           this._running = false;
           if (typeof super['stop'] === 'function') {
-            await super.stop(...args);
+            return await super.stop(...args);
           }
         } catch (e) {
           this._running = true;

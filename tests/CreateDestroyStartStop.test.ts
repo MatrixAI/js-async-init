@@ -27,8 +27,9 @@ describe('CreateDestroyStartStop', () => {
         constructorMock();
       }
 
-      public async start(): Promise<void> {
+      public async start(): Promise<string> {
         startMock();
+        return 'hello world';
       }
 
       public async stop(): Promise<void> {
