@@ -6,6 +6,8 @@ Asynchronous initialization and deinitialization decorators for JavaScript/TypeS
 
 Because decorators are experimental, you must enable: `"experimentalDecorators": true` in your `tsconfig.json` to use this library.
 
+TypeScript does not allow decorator properties that are protected or private.
+
 Example Usage:
 
 ```ts

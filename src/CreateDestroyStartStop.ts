@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex';
 import {
   AsyncFunction,
   GeneratorFunction,
@@ -9,101 +10,129 @@ import {
   ErrorAsyncInitDestroyed,
 } from './errors';
 
-interface CreateDestroyStartStop {
-  get running(): boolean;
-  get destroyed(): boolean;
-  start(...args: Array<any>): Promise<any>;
-  stop(...args: Array<any>): Promise<any>;
-  destroy(...args: Array<any>): Promise<any>;
+/**
+ * Symbols prevents name clashes with decorated classes
+ */
+const _running = Symbol('_running');
+const running = Symbol('running');
+const _destroyed = Symbol('_destroyed');
+const destroyed = Symbol('destroyed');
+const initLock = Symbol('initLock');
+
+interface CreateDestroyStartStop<
+  StartReturn = unknown,
+  StopReturn = unknown,
+  DestroyReturn = unknown,
+> {
+  get [running](): boolean;
+  get [destroyed](): boolean;
+  readonly [initLock]: Mutex;
+  start(...args: Array<any>): Promise<StartReturn | void>;
+  stop(...args: Array<any>): Promise<StopReturn | void>;
+  destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
 
-function CreateDestroyStartStop(
+function CreateDestroyStartStop<
+  StartReturn = unknown,
+  StopReturn = unknown,
+  DestroyReturn = unknown,
+>(
   errorRunning: Error = new ErrorAsyncInitRunning(),
   errorDestroyed: Error = new ErrorAsyncInitDestroyed(),
 ) {
   return <
     T extends {
       new (...args: any[]): {
-        start?(...args: Array<any>): Promise<any>;
-        stop?(...args: Array<any>): Promise<any>;
-        destroy?(...args: Array<any>): Promise<any>;
+        start?(...args: Array<any>): Promise<StartReturn | void>;
+        stop?(...args: Array<any>): Promise<StopReturn | void>;
+        destroy?(...args: Array<any>): Promise<DestroyReturn | void>;
       };
     },
   >(
     constructor: T,
   ) => {
     return class extends constructor {
-      public _running: boolean = false;
-      public _destroyed: boolean = false;
+      public [_running]: boolean = false;
+      public [_destroyed]: boolean = false;
+      public readonly [initLock]: Mutex = new Mutex();
 
-      get running(): boolean {
-        return this._running;
+      public get [running](): boolean {
+        return this[_running];
       }
 
-      get destroyed(): boolean {
-        return this._destroyed;
+      public get [destroyed](): boolean {
+        return this[_destroyed];
       }
 
-      public async destroy(...args: Array<any>): Promise<any> {
+      public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
+        const release = await this[initLock].acquire();
         try {
-          if (this._destroyed) {
+          if (this[_destroyed]) {
             return;
           }
-          if (this._running) {
+          if (this[_running]) {
             throw errorRunning;
           }
-          this._destroyed = true;
+          let result;
           if (typeof super['destroy'] === 'function') {
-            return await super.destroy(...args);
+            result = await super.destroy(...args);
           }
-        } catch (e) {
-          this._destroyed = false;
-          throw e;
+          this[_destroyed] = true;
+          return result;
+        } finally {
+          release();
         }
       }
 
-      public async start(...args: Array<any>): Promise<any> {
+      public async start(...args: Array<any>): Promise<StartReturn | void> {
+        const release = await this[initLock].acquire();
         try {
-          if (this._running) {
+          if (this[_running]) {
             return;
           }
-          if (this._destroyed) {
+          if (this[_destroyed]) {
             throw errorDestroyed;
           }
-          this._running = true;
+          let result;
           if (typeof super['start'] === 'function') {
-            return await super.start(...args);
+            result = await super.start(...args);
           }
-        } catch (e) {
-          this._running = false;
-          throw e;
+          this[_running] = true;
+          return result;
+        } finally {
+          release();
         }
       }
 
-      public async stop(...args: Array<any>): Promise<any> {
+      public async stop(...args: Array<any>): Promise<StopReturn | void> {
+        const release = await this[initLock].acquire();
         try {
-          if (!this._running) {
+          if (!this[_running]) {
             return;
           }
-          if (this._destroyed) {
+          if (this[_destroyed]) {
             // It is not possible to be running and destroyed
             // however this line is here for completion
             throw errorDestroyed;
           }
-          this._running = false;
+          let result;
           if (typeof super['stop'] === 'function') {
-            return await super.stop(...args);
+            result = await super.stop(...args);
           }
-        } catch (e) {
-          this._running = true;
-          throw e;
+          this[_running] = false;
+          return result;
+        } finally {
+          release();
         }
       }
     };
   };
 }
 
-function ready(errorNotRunning: Error = new ErrorAsyncInitNotRunning()) {
+function ready(
+  errorNotRunning: Error = new ErrorAsyncInitNotRunning(),
+  wait: boolean = false,
+) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
     let kind;
     if (descriptor.value != null) {
@@ -119,28 +148,48 @@ function ready(errorNotRunning: Error = new ErrorAsyncInitNotRunning()) {
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
-        if (!this._running) {
+        if (wait) {
+          await this[initLock].waitForUnlock();
+        } else {
+          if (this[initLock].isLocked()) {
+            throw errorNotRunning;
+          }
+        }
+        if (!this[_running]) {
           throw errorNotRunning;
         }
         return f.apply(this, args);
       };
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
-        if (!this._running) {
+        if (this[initLock].isLocked()) {
+          throw errorNotRunning;
+        }
+        if (!this[_running]) {
           throw errorNotRunning;
         }
         yield* f.apply(this, args);
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
-        if (!this._running) {
+        if (wait) {
+          await this[initLock].waitForUnlock();
+        } else {
+          if (this[initLock].isLocked()) {
+            throw errorNotRunning;
+          }
+        }
+        if (!this[_running]) {
           throw errorNotRunning;
         }
         yield* f.apply(this, args);
       };
     } else {
       descriptor[kind] = function (...args) {
-        if (!this._running) {
+        if (this[initLock].isLocked()) {
+          throw errorNotRunning;
+        }
+        if (!this[_running]) {
           throw errorNotRunning;
         }
         return f.apply(this, args);
@@ -152,4 +201,4 @@ function ready(errorNotRunning: Error = new ErrorAsyncInitNotRunning()) {
   };
 }
 
-export { CreateDestroyStartStop, ready };
+export { CreateDestroyStartStop, ready, running, destroyed, initLock };

@@ -1,5 +1,7 @@
-import { CreateDestroy, ready } from '@/CreateDestroy';
+import { Mutex, tryAcquire } from 'async-mutex';
+import { CreateDestroy, ready, destroyed, initLock } from '@/CreateDestroy';
 import { ErrorAsyncInitDestroyed } from '@/errors';
+import * as testUtils from './utils';
 
 describe('CreateDestroy', () => {
   test('creates, destroys', async () => {
@@ -165,7 +167,18 @@ describe('CreateDestroy', () => {
     await y.destroy();
     expect(destroyMock.mock.calls.length).toBe(1);
   });
-  test('calling methods throws running exceptions when not ready', async () => {
+  test('symbols do not conflict with existing properties', async () => {
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      destroyed: string = 'some property';
+      initLock: string = 'some lock';
+    }
+    const x = new X();
+    expect(x[destroyed]).not.toBe(x.destroyed);
+    expect(x[initLock]).not.toBe(x.initLock);
+  });
+  test('calling methods throws destroyed exceptions when not ready', async () => {
     const doSomethingSyncMock = jest.fn();
     const doSomethingAsyncMock = jest.fn();
     const doSomethingGenSyncMock = jest.fn();
@@ -215,8 +228,40 @@ describe('CreateDestroy', () => {
     await expect(
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.doSomethingSync();
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        await x.doSomethingAsync();
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.doSomethingGenSync().next();
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        await x.doSomethingGenAsync().next();
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
   });
-  test('calling getters and setters throws running exceptions when not running', async () => {
+  test('calling getters and setters throws destroyed exceptions when destroyed', async () => {
     const aMock = jest.fn();
     const bMock = jest.fn();
     interface X extends CreateDestroy {}
@@ -248,6 +293,23 @@ describe('CreateDestroy', () => {
     expect(() => {
       x.b = 3;
     }).toThrow(ErrorAsyncInitDestroyed);
+    // During destroy
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.a;
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.b = 10;
+        await destroy;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitDestroyed);
   });
   test('custom running, not running and destroyed exceptions', async () => {
     const errorDestroyed = new Error('destroyed');
@@ -275,12 +337,116 @@ describe('CreateDestroy', () => {
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(errorDestroyed);
   });
-  test('destroy is idempotent', async () => {
+  test('repeated destroy is idempotent', async () => {
     interface X extends CreateDestroy {}
     @CreateDestroy()
     class X {}
     const x = new X();
     await x.destroy();
     await x.destroy();
+  });
+  test('concurrent destroy is serialised', async () => {
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      public async destroy(f) {
+        await f();
+      }
+    }
+    const x = new X();
+    const lock = new Mutex();
+    const destroyCallback = jest.fn().mockImplementation(async () => {
+      // This will raise E_ALREADY_LOCKED
+      // if the lock is already locked
+      const release = await tryAcquire(lock).acquire();
+      // Sleep to ensure enough time for mutual exclusion
+      await testUtils.sleep(100);
+      release();
+    });
+    await expect(
+      Promise.all([x.destroy(destroyCallback), x.destroy(destroyCallback)]),
+    ).resolves.toEqual([undefined, undefined]);
+    expect(destroyCallback.mock.calls.length).toBe(1);
+  });
+  test('calling methods waiting for destruction', async () => {
+    const errorDestroyed = new Error('destroyed');
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      public async destroy(f?) {
+        if (f != null) await f();
+      }
+
+      @ready(errorDestroyed, true)
+      public doSomethingSync() {}
+
+      @ready(errorDestroyed, true)
+      public async doSomethingAsync() {}
+
+      @ready(errorDestroyed, true)
+      public *doSomethingGenSync() {}
+
+      @ready(errorDestroyed, true)
+      public async *doSomethingGenAsync() {}
+    }
+    // Behaves as normal
+    const x = new X();
+    await x.destroy();
+    expect(x.doSomethingSync.bind(x)).toThrow(errorDestroyed);
+    await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(errorDestroyed);
+    expect(() => x.doSomethingGenSync().next()).toThrow(errorDestroyed);
+    await expect(
+      async () => await x.doSomethingGenAsync().next(),
+    ).rejects.toThrow(errorDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.doSomethingSync();
+        await destroy;
+      })(),
+    ).rejects.toThrow(errorDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        await x.doSomethingAsync();
+        await destroy;
+      })(),
+    ).rejects.toThrow(errorDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        x.doSomethingGenSync().next();
+        await destroy;
+      })(),
+    ).rejects.toThrow(errorDestroyed);
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy();
+        await x.doSomethingGenAsync().next();
+        await destroy;
+      })(),
+    ).rejects.toThrow(errorDestroyed);
+    // Failing to destroy will result in success
+    // for waiting async operations
+    await expect(
+      (async () => {
+        const x = new X();
+        const destroy = x.destroy(async () => {
+          throw new Error('failed to destroy');
+        });
+        const async = x.doSomethingAsync();
+        const genAsync = x.doSomethingGenAsync().next();
+        try {
+          await destroy;
+        } catch (e) {
+          expect(e).toBeInstanceOf(Error);
+        }
+        await Promise.all([async, genAsync]);
+      })(),
+    ).resolves.toBeUndefined();
   });
 });
