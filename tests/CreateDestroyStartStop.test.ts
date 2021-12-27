@@ -1,9 +1,17 @@
-import { CreateDestroyStartStop, ready } from '@/CreateDestroyStartStop';
+import { Mutex, tryAcquire } from 'async-mutex';
+import {
+  CreateDestroyStartStop,
+  ready,
+  running,
+  destroyed,
+  initLock,
+} from '@/CreateDestroyStartStop';
 import {
   ErrorAsyncInitDestroyed,
   ErrorAsyncInitNotRunning,
   ErrorAsyncInitRunning,
 } from '@/errors';
+import * as testUtils from './utils';
 
 describe('CreateDestroyStartStop', () => {
   test('creates, destroys, starts and stops', async () => {
@@ -266,6 +274,19 @@ describe('CreateDestroyStartStop', () => {
     await y.destroy();
     expect(destroyMock.mock.calls.length).toBe(1);
   });
+  test('symbols do not conflict with existing properties', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      running: string = 'some property';
+      destroyed: string = 'another property';
+      initLock: string = 'some lock';
+    }
+    const x = new X();
+    expect(x[running]).not.toBe(x.running);
+    expect(x[destroyed]).not.toBe(x.destroyed);
+    expect(x[initLock]).not.toBe(x.initLock);
+  });
   test('calling methods throws running exceptions when not ready', async () => {
     const doSomethingSyncMock = jest.fn();
     const doSomethingAsyncMock = jest.fn();
@@ -294,7 +315,7 @@ describe('CreateDestroyStartStop', () => {
         doSomethingGenAsyncMock();
       }
     }
-    const x = new X();
+    let x = new X();
     // Not ready
     expect(x.doSomethingSync.bind(x)).toThrow(ErrorAsyncInitNotRunning);
     await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(
@@ -340,6 +361,74 @@ describe('CreateDestroyStartStop', () => {
     await expect(
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    x = new X();
+    // Not ready when in the middle of starting
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.doSomethingSync();
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    await expect(
+      (async () => {
+        const start = x.start();
+        await x.doSomethingAsync();
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.doSomethingGenSync().next();
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    await expect(
+      (async () => {
+        const start = x.start();
+        await x.doSomethingGenAsync().next();
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    // Not ready when in the middle of stopping
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        x.doSomethingSync();
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        await x.doSomethingAsync();
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        x.doSomethingGenSync().next();
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        await x.doSomethingGenAsync().next();
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
   });
   test('calling getters and setters throws running exceptions when not ready', async () => {
     const aMock = jest.fn();
@@ -361,7 +450,7 @@ describe('CreateDestroyStartStop', () => {
         this._b = v;
       }
     }
-    const x = new X();
+    let x = new X();
     // Not ready
     expect(() => x.a).toThrow(ErrorAsyncInitNotRunning);
     expect(() => {
@@ -385,6 +474,47 @@ describe('CreateDestroyStartStop', () => {
     expect(() => {
       x.b = 3;
     }).toThrow(ErrorAsyncInitNotRunning);
+    x = new X();
+    // Getters and setters are synchronous
+    // Therefore they can only throw exceptions during starting or stopping
+    // During starting
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.a;
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.b = 10;
+        await start;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.stop();
+    // During stopping
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        x.a;
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    await expect(
+      (async () => {
+        const stop = x.stop();
+        x.b = 10;
+        await stop;
+      })(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await x.start();
+    x.b = 10;
+    expect(x.a).toBe('a');
+    await x.stop();
   });
   test('custom running, not running and destroyed exceptions', async () => {
     const errorRunning = new Error('running');
@@ -418,7 +548,7 @@ describe('CreateDestroyStartStop', () => {
     await x.destroy();
     await expect(x.start.bind(x)).rejects.toThrow(errorDestroyed);
   });
-  test('start, stop and destroy are idempotent', async () => {
+  test('repeated start, stop and destroy are idempotent', async () => {
     interface X extends CreateDestroyStartStop {}
     @CreateDestroyStartStop()
     class X {}
@@ -444,5 +574,181 @@ describe('CreateDestroyStartStop', () => {
     x = new X();
     await x.destroy();
     await expect(x.start.bind(x)).rejects.toThrow(ErrorAsyncInitDestroyed);
+  });
+  test('concurrent start, stop and destroy are serialised', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      public async start(f) {
+        await f();
+      }
+      public async stop(f) {
+        await f();
+      }
+      public async destroy(f) {
+        await f();
+      }
+    }
+    const x = new X();
+    const lock = new Mutex();
+    const startCallback = jest.fn().mockImplementation(async () => {
+      // This will raise E_ALREADY_LOCKED
+      // if the lock is already locked
+      const release = await tryAcquire(lock).acquire();
+      // Sleep to ensure enough time for mutual exclusion
+      await testUtils.sleep(100);
+      release();
+    });
+    await expect(
+      Promise.all([x.start(startCallback), x.start(startCallback)]),
+    ).resolves.toEqual([undefined, undefined]);
+    expect(startCallback.mock.calls.length).toBe(1);
+    const stopCallback = jest.fn().mockImplementation(async () => {
+      // This will raise E_ALREADY_LOCKED
+      // if the lock is already locked
+      const release = await tryAcquire(lock).acquire();
+      // Sleep to ensure enough time for mutual exclusion
+      await testUtils.sleep(100);
+      release();
+    });
+    await expect(
+      Promise.all([x.stop(stopCallback), x.stop(stopCallback)]),
+    ).resolves.toEqual([undefined, undefined]);
+    expect(stopCallback.mock.calls.length).toBe(1);
+    const destroyCallback = jest.fn().mockImplementation(async () => {
+      // This will raise E_ALREADY_LOCKED
+      // if the lock is already locked
+      const release = await tryAcquire(lock).acquire();
+      // Sleep to ensure enough time for mutual exclusion
+      await testUtils.sleep(100);
+      release();
+    });
+    await expect(
+      Promise.all([x.destroy(destroyCallback), x.destroy(destroyCallback)]),
+    ).resolves.toEqual([undefined, undefined]);
+    expect(destroyCallback.mock.calls.length).toBe(1);
+  });
+  test('start, stop then destroy and vice versa is serialised', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      public async start(f?) {
+        if (f != null) await f();
+      }
+      public async stop(f?) {
+        if (f != null) await f();
+      }
+      public async destroy(f?) {
+        if (f != null) await f();
+      }
+    }
+    let x = new X();
+    const lock = new Mutex();
+    const callback = jest.fn().mockImplementation(async () => {
+      // This will raise E_ALREADY_LOCKED
+      // if the lock is already locked
+      const release = await tryAcquire(lock).acquire();
+      // Sleep to ensure enough time for mutual exclusion
+      await testUtils.sleep(100);
+      release();
+    });
+    await expect(
+      (async () => {
+        const r1 = x.start(callback);
+        const r2 = x.stop(callback);
+        const r3 = x.destroy(callback);
+        return [await r1, await r2, await r3];
+      })(),
+    ).resolves.toEqual([undefined, undefined, undefined]);
+    expect(callback.mock.calls.length).toBe(3);
+    callback.mockClear();
+    x = new X();
+    await x.start();
+    await expect(
+      (async () => {
+        const r1 = x.stop(callback);
+        const r2 = x.start(callback);
+        return [await r1, await r2];
+      })(),
+    ).resolves.toEqual([undefined, undefined]);
+    expect(callback.mock.calls.length).toBe(2);
+    await x.stop();
+    x = new X();
+    await x.start();
+    await expect(
+      (async () => {
+        const r1 = x.stop(callback);
+        const r2 = x.destroy(callback);
+        return [await r1, await r2];
+      })(),
+    ).resolves.toEqual([undefined, undefined]);
+  });
+  test('calling methods waiting for ready', async () => {
+    const errorNotRunning = new Error('not running');
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      @ready(errorNotRunning, true)
+      public doSomethingSync() {}
+
+      @ready(errorNotRunning, true)
+      public async doSomethingAsync() {}
+
+      @ready(errorNotRunning, true)
+      public *doSomethingGenSync() {}
+
+      @ready(errorNotRunning, true)
+      public async *doSomethingGenAsync() {}
+    }
+    let x = new X();
+    // Behaves similarly to ready when not starting or stopping
+    expect(x.doSomethingSync.bind(x)).toThrow(errorNotRunning);
+    await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(errorNotRunning);
+    expect(() => x.doSomethingGenSync().next()).toThrow(errorNotRunning);
+    await expect(
+      async () => await x.doSomethingGenAsync().next(),
+    ).rejects.toThrow(errorNotRunning);
+    await x.start();
+    await expect(x.destroy.bind(x)).rejects.toThrow(ErrorAsyncInitRunning);
+    await x.stop();
+    await x.destroy();
+    await expect(x.start.bind(x)).rejects.toThrow(ErrorAsyncInitDestroyed);
+    x = new X();
+    // Synchronous cannot wait, they will throw exception
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.doSomethingSync();
+        await start;
+      })(),
+    ).rejects.toThrow(errorNotRunning);
+    await x.stop();
+    // Asynchronous will wait
+    await expect(
+      (async () => {
+        const start = x.start();
+        await x.doSomethingAsync();
+        await start;
+      })(),
+    ).resolves.toBeUndefined();
+    await x.stop();
+    // Synchronous cannot wait, they will throw exception
+    await expect(
+      (async () => {
+        const start = x.start();
+        x.doSomethingGenSync().next();
+        await start;
+      })(),
+    ).rejects.toThrow(errorNotRunning);
+    await x.stop();
+    // Asynchronous will wait
+    await expect(
+      (async () => {
+        const start = x.start();
+        await x.doSomethingGenAsync().next();
+        await start;
+      })(),
+    ).resolves.toBeUndefined();
+    await x.stop();
   });
 });
