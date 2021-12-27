@@ -1,21 +1,17 @@
-import { Mutex } from 'async-mutex';
 import {
+  _destroyed,
+  destroyed,
+  initLock,
+  RWLock,
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
 } from './utils';
 import { ErrorAsyncInitDestroyed } from './errors';
 
-/**
- * Symbols prevents name clashes with decorated classes
- */
-const _destroyed = Symbol('_destroyed');
-const destroyed = Symbol('destroyed');
-const initLock = Symbol('initLock');
-
 interface CreateDestroy<DestroyReturn = unknown> {
   get [destroyed](): boolean;
-  readonly [initLock]: Mutex;
+  readonly [initLock]: RWLock;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
 
@@ -31,14 +27,14 @@ function CreateDestroy<DestroyReturn = unknown>() {
   ) => {
     return class extends constructor {
       public [_destroyed]: boolean = false;
-      public readonly [initLock]: Mutex = new Mutex();
+      public readonly [initLock]: RWLock = new RWLock();
 
       public get [destroyed](): boolean {
         return this[_destroyed];
       }
 
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
-        const release = await this[initLock].acquire();
+        const release = await this[initLock].acquireWrite();
         try {
           if (this[_destroyed]) {
             return;
@@ -59,7 +55,7 @@ function CreateDestroy<DestroyReturn = unknown>() {
 
 function ready(
   errorDestroyed: Error = new ErrorAsyncInitDestroyed(),
-  wait: boolean = false,
+  block: boolean = false,
 ) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
     let kind;
@@ -76,17 +72,26 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
-        if (wait) {
-          await this[initLock].waitForUnlock();
+        if (block) {
+          const release = await this[initLock].acquireRead();
+          try {
+            if (this[_destroyed]) {
+              throw errorDestroyed;
+            }
+            // Await the async operation before releasing
+            return await f.apply(this, args);
+          } finally {
+            release();
+          }
         } else {
           if (this[initLock].isLocked()) {
             throw errorDestroyed;
           }
+          if (this[_destroyed]) {
+            throw errorDestroyed;
+          }
+          return f.apply(this, args);
         }
-        if (this[_destroyed]) {
-          throw errorDestroyed;
-        }
-        return f.apply(this, args);
       };
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
@@ -102,17 +107,25 @@ function ready(
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
-        if (wait) {
-          await this[initLock].waitForUnlock();
+        if (block) {
+          const release = await this[initLock].acquireRead();
+          try {
+            if (this[_destroyed]) {
+              throw errorDestroyed;
+            }
+            yield* f.apply(this, args);
+          } finally {
+            release();
+          }
         } else {
           if (this[initLock].isLocked()) {
             throw errorDestroyed;
           }
+          if (this[_destroyed]) {
+            throw errorDestroyed;
+          }
+          yield* f.apply(this, args);
         }
-        if (this[_destroyed]) {
-          throw errorDestroyed;
-        }
-        yield* f.apply(this, args);
       };
     } else {
       descriptor[kind] = function (...args) {

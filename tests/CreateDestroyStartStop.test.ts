@@ -683,7 +683,7 @@ describe('CreateDestroyStartStop', () => {
       })(),
     ).resolves.toEqual([undefined, undefined]);
   });
-  test('calling methods waiting for ready', async () => {
+  test('calling methods blocking ready', async () => {
     const errorNotRunning = new Error('not running');
     interface X extends CreateDestroyStartStop {}
     @CreateDestroyStartStop()
@@ -750,5 +750,58 @@ describe('CreateDestroyStartStop', () => {
       })(),
     ).resolves.toBeUndefined();
     await x.stop();
+  });
+  test('calling async blocking methods do not block each other', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      @ready(undefined, true)
+      public async doSomethingAsync1(end: boolean = false) {
+        if (end) {
+          expect(this[initLock].readerCount).toBe(5);
+          expect(this[initLock].writerCount).toBe(0);
+          return 'hello world';
+        } else {
+          expect(this[initLock].readerCount).toBe(1);
+          expect(this[initLock].writerCount).toBe(0);
+          return await this.doSomethingAsync2();
+        }
+      }
+
+      @ready(undefined, true)
+      public async doSomethingAsync2() {
+        expect(this[initLock].readerCount).toBe(2);
+        expect(this[initLock].writerCount).toBe(0);
+        let result = '';
+        for await (const v of this.doSomethingGenAsync1()) {
+          result += v;
+        }
+        return result;
+      }
+
+      @ready(undefined, true)
+      public async *doSomethingGenAsync1() {
+        expect(this[initLock].readerCount).toBe(3);
+        expect(this[initLock].writerCount).toBe(0);
+        yield* this.doSomethingGenAsync2();
+      }
+
+      @ready(undefined, true)
+      public async *doSomethingGenAsync2() {
+        expect(this[initLock].readerCount).toBe(4);
+        expect(this[initLock].writerCount).toBe(0);
+        const s = await this.doSomethingAsync1(true);
+        for (const c of s) {
+          yield c;
+        }
+      }
+    }
+    const x = new X();
+    await x.start();
+    expect(await x.doSomethingAsync1()).toBe('hello world');
+    expect(x[initLock].readerCount).toBe(0);
+    expect(x[initLock].writerCount).toBe(0);
+    await x.stop();
+    await x.destroy();
   });
 });
