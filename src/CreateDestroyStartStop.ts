@@ -1,5 +1,10 @@
-import { Mutex } from 'async-mutex';
 import {
+  _running,
+  running,
+  _destroyed,
+  destroyed,
+  initLock,
+  RWLock,
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
@@ -10,15 +15,6 @@ import {
   ErrorAsyncInitDestroyed,
 } from './errors';
 
-/**
- * Symbols prevents name clashes with decorated classes
- */
-const _running = Symbol('_running');
-const running = Symbol('running');
-const _destroyed = Symbol('_destroyed');
-const destroyed = Symbol('destroyed');
-const initLock = Symbol('initLock');
-
 interface CreateDestroyStartStop<
   StartReturn = unknown,
   StopReturn = unknown,
@@ -26,7 +22,7 @@ interface CreateDestroyStartStop<
 > {
   get [running](): boolean;
   get [destroyed](): boolean;
-  readonly [initLock]: Mutex;
+  readonly [initLock]: RWLock;
   start(...args: Array<any>): Promise<StartReturn | void>;
   stop(...args: Array<any>): Promise<StopReturn | void>;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
@@ -54,7 +50,7 @@ function CreateDestroyStartStop<
     return class extends constructor {
       public [_running]: boolean = false;
       public [_destroyed]: boolean = false;
-      public readonly [initLock]: Mutex = new Mutex();
+      public readonly [initLock]: RWLock = new RWLock();
 
       public get [running](): boolean {
         return this[_running];
@@ -65,7 +61,7 @@ function CreateDestroyStartStop<
       }
 
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
-        const release = await this[initLock].acquire();
+        const release = await this[initLock].acquireWrite();
         try {
           if (this[_destroyed]) {
             return;
@@ -85,7 +81,7 @@ function CreateDestroyStartStop<
       }
 
       public async start(...args: Array<any>): Promise<StartReturn | void> {
-        const release = await this[initLock].acquire();
+        const release = await this[initLock].acquireWrite();
         try {
           if (this[_running]) {
             return;
@@ -105,7 +101,7 @@ function CreateDestroyStartStop<
       }
 
       public async stop(...args: Array<any>): Promise<StopReturn | void> {
-        const release = await this[initLock].acquire();
+        const release = await this[initLock].acquireWrite();
         try {
           if (!this[_running]) {
             return;
@@ -131,7 +127,7 @@ function CreateDestroyStartStop<
 
 function ready(
   errorNotRunning: Error = new ErrorAsyncInitNotRunning(),
-  wait: boolean = false,
+  block: boolean = false,
 ) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
     let kind;
@@ -148,17 +144,26 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
-        if (wait) {
-          await this[initLock].waitForUnlock();
+        if (block) {
+          const release = await this[initLock].acquireRead();
+          try {
+            if (!this[_running]) {
+              throw errorNotRunning;
+            }
+            // Await the async operation before releasing
+            return await f.apply(this, args);
+          } finally {
+            release();
+          }
         } else {
           if (this[initLock].isLocked()) {
             throw errorNotRunning;
           }
+          if (!this[_running]) {
+            throw errorNotRunning;
+          }
+          return f.apply(this, args);
         }
-        if (!this[_running]) {
-          throw errorNotRunning;
-        }
-        return f.apply(this, args);
       };
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
@@ -172,17 +177,25 @@ function ready(
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
-        if (wait) {
-          await this[initLock].waitForUnlock();
+        if (block) {
+          const release = await this[initLock].acquireRead();
+          try {
+            if (!this[_running]) {
+              throw errorNotRunning;
+            }
+            yield* f.apply(this, args);
+          } finally {
+            release();
+          }
         } else {
           if (this[initLock].isLocked()) {
             throw errorNotRunning;
           }
+          if (!this[_running]) {
+            throw errorNotRunning;
+          }
+          yield* f.apply(this, args);
         }
-        if (!this[_running]) {
-          throw errorNotRunning;
-        }
-        yield* f.apply(this, args);
       };
     } else {
       descriptor[kind] = function (...args) {

@@ -70,16 +70,16 @@
 				<section class="tsd-panel tsd-index-panel">
 					<div class="tsd-index-content">
 						<section class="tsd-index-section ">
-							<h3>Interfaces</h3>
+							<h3>References</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter"><a href="../interfaces/CreateDestroy.CreateDestroy-1.html" class="tsd-kind-icon">Create<wbr>Destroy</a></li>
+								<li class="tsd-kind-reference tsd-parent-kind-module"><a href="CreateDestroy.html#destroyed" class="tsd-kind-icon">destroyed</a></li>
+								<li class="tsd-kind-reference tsd-parent-kind-module"><a href="CreateDestroy.html#initLock" class="tsd-kind-icon">init<wbr>Lock</a></li>
 							</ul>
 						</section>
 						<section class="tsd-index-section ">
-							<h3>Variables</h3>
+							<h3>Interfaces</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-variable tsd-parent-kind-module"><a href="CreateDestroy.html#destroyed" class="tsd-kind-icon">destroyed</a></li>
-								<li class="tsd-kind-variable tsd-parent-kind-module"><a href="CreateDestroy.html#initLock" class="tsd-kind-icon">init<wbr>Lock</a></li>
+								<li class="tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter"><a href="../interfaces/CreateDestroy.CreateDestroy-1.html" class="tsd-kind-icon">Create<wbr>Destroy</a></li>
 							</ul>
 						</section>
 						<section class="tsd-index-section ">
@@ -93,26 +93,16 @@
 				</section>
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
-				<h2>Variables</h2>
-				<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-module">
+				<h2>References</h2>
+				<section class="tsd-panel tsd-member tsd-kind-reference tsd-parent-kind-module">
 					<a name="destroyed" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagConst">Const</span> destroyed</h3>
-					<div class="tsd-signature tsd-kind-icon">destroyed<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">typeof </span><a href="CreateDestroy.html#destroyed" class="tsd-signature-type" data-tsd-kind="Variable">destroyed</a><span class="tsd-signature-symbol"> = ...</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L13">src/CreateDestroy.ts:13</a></li>
-						</ul>
-					</aside>
+					<h3>destroyed</h3>
+					Re-exports <a href="utils.html#destroyed">destroyed</a>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-variable tsd-parent-kind-module">
+				<section class="tsd-panel tsd-member tsd-kind-reference tsd-parent-kind-module">
 					<a name="initLock" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagConst">Const</span> init<wbr>Lock</h3>
-					<div class="tsd-signature tsd-kind-icon">init<wbr>Lock<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">typeof </span><a href="CreateDestroy.html#initLock" class="tsd-signature-type" data-tsd-kind="Variable">initLock</a><span class="tsd-signature-symbol"> = ...</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L14">src/CreateDestroy.ts:14</a></li>
-						</ul>
-					</aside>
+					<h3>init<wbr>Lock</h3>
+					Re-exports <a href="utils.html#initLock">initLock</a>
 				</section>
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
@@ -127,7 +117,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L22">src/CreateDestroy.ts:22</a></li>
+									<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L18">src/CreateDestroy.ts:18</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-type-parameters-title">Type parameters</h4>
@@ -168,13 +158,13 @@
 					<a name="ready" class="tsd-anchor"></a>
 					<h3>ready</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
-						<li class="tsd-signature tsd-kind-icon">ready<span class="tsd-signature-symbol">(</span>errorDestroyed<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Error</span>, wait<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>target<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span>, key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, descriptor<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PropertyDescriptor</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">PropertyDescriptor</span></li>
+						<li class="tsd-signature tsd-kind-icon">ready<span class="tsd-signature-symbol">(</span>errorDestroyed<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Error</span>, block<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>target<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span>, key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, descriptor<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PropertyDescriptor</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">PropertyDescriptor</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L60">src/CreateDestroy.ts:60</a></li>
+									<li>Defined in <a href="https://github.com/MatrixAI/js-async-init/blob/master/src/CreateDestroy.ts#L56">src/CreateDestroy.ts:56</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -183,7 +173,7 @@
 									<h5>errorDestroyed: <span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol"> = ...</span></h5>
 								</li>
 								<li>
-									<h5>wait: <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = false</span></h5>
+									<h5>block: <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = false</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">(</span>target<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span>, key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, descriptor<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PropertyDescriptor</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">PropertyDescriptor</span></h4>
@@ -244,14 +234,14 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter">
-						<a href="../interfaces/CreateDestroy.CreateDestroy-1.html" class="tsd-kind-icon">Create<wbr>Destroy</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-module">
+					<li class=" tsd-kind-reference tsd-parent-kind-module">
 						<a href="CreateDestroy.html#destroyed" class="tsd-kind-icon">destroyed</a>
 					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-module">
+					<li class=" tsd-kind-reference tsd-parent-kind-module">
 						<a href="CreateDestroy.html#initLock" class="tsd-kind-icon">init<wbr>Lock</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-module tsd-has-type-parameter">
+						<a href="../interfaces/CreateDestroy.CreateDestroy-1.html" class="tsd-kind-icon">Create<wbr>Destroy</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module tsd-has-type-parameter">
 						<a href="CreateDestroy.html#CreateDestroy-2" class="tsd-kind-icon">Create<wbr>Destroy</a>
