@@ -804,4 +804,31 @@ describe('CreateDestroyStartStop', () => {
     await x.stop();
     await x.destroy();
   });
+  test('stop can interrupt concurrent blocking methods', async () => {
+    interface X extends CreateDestroyStartStop<void, void> {}
+    @CreateDestroyStartStop<void, void>()
+    class X {
+      @ready(undefined, true)
+      public async doSomethingAsync() {}
+    }
+    const x = new X();
+    await x.start();
+    const ops: Array<Promise<void>> = [];
+    for (let i = 0; i < 10; i++) {
+      ops.push(x.doSomethingAsync());
+      if (i === 4) {
+        // Halfway point call stop
+        ops.push(x.stop());
+      }
+    }
+    const results = await Promise.allSettled(ops);
+    // 5 ops are fulfilled
+    expect(results.slice(0, 5).every((v) => v.status === 'fulfilled')).toBe(
+      true,
+    );
+    // 6th op is the stop op
+    expect(results[5].status).toBe('fulfilled');
+    // 5 ops are rejected
+    expect(results.slice(6).every((v) => v.status === 'rejected')).toBe(true);
+  });
 });
