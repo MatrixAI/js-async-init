@@ -1,5 +1,5 @@
 import { Mutex, tryAcquire } from 'async-mutex';
-import { StartStop, ready, running, initLock } from '@/StartStop';
+import { StartStop, ready, running, status, initLock } from '@/StartStop';
 import { ErrorAsyncInitNotRunning } from '@/errors';
 import * as testUtils from './utils';
 
@@ -17,10 +17,12 @@ describe('StartStop', () => {
       }
 
       public async start(): Promise<void> {
+        expect(this[status]).toBe('starting');
         startMock();
       }
 
       public async stop(): Promise<void> {
+        expect(this[status]).toBe('stopping');
         stopMock();
       }
 

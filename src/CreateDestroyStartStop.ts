@@ -1,8 +1,11 @@
+import type { Status } from './types';
 import {
   _running,
   running,
   _destroyed,
   destroyed,
+  _status,
+  status,
   initLock,
   RWLock,
   AsyncFunction,
@@ -22,6 +25,7 @@ interface CreateDestroyStartStop<
 > {
   get [running](): boolean;
   get [destroyed](): boolean;
+  get [status](): Status;
   readonly [initLock]: RWLock;
   start(...args: Array<any>): Promise<StartReturn | void>;
   stop(...args: Array<any>): Promise<StopReturn | void>;
@@ -50,6 +54,7 @@ function CreateDestroyStartStop<
     return class extends constructor {
       public [_running]: boolean = false;
       public [_destroyed]: boolean = false;
+      public [_status]: Status = null;
       public readonly [initLock]: RWLock = new RWLock();
 
       public get [running](): boolean {
@@ -60,8 +65,13 @@ function CreateDestroyStartStop<
         return this[_destroyed];
       }
 
+      public get [status](): Status {
+        return this[_status];
+      }
+
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
         const release = await this[initLock].acquireWrite();
+        this[_status] = 'destroying';
         try {
           if (this[_destroyed]) {
             return;
@@ -76,12 +86,14 @@ function CreateDestroyStartStop<
           this[_destroyed] = true;
           return result;
         } finally {
+          this[_status] = null;
           release();
         }
       }
 
       public async start(...args: Array<any>): Promise<StartReturn | void> {
         const release = await this[initLock].acquireWrite();
+        this[_status] = 'starting';
         try {
           if (this[_running]) {
             return;
@@ -96,12 +108,14 @@ function CreateDestroyStartStop<
           this[_running] = true;
           return result;
         } finally {
+          this[_status] = null;
           release();
         }
       }
 
       public async stop(...args: Array<any>): Promise<StopReturn | void> {
         const release = await this[initLock].acquireWrite();
+        this[_status] = 'stopping';
         try {
           if (!this[_running]) {
             return;
@@ -118,6 +132,7 @@ function CreateDestroyStartStop<
           this[_running] = false;
           return result;
         } finally {
+          this[_status] = null;
           release();
         }
       }
@@ -214,4 +229,4 @@ function ready(
   };
 }
 
-export { CreateDestroyStartStop, ready, running, destroyed, initLock };
+export { CreateDestroyStartStop, ready, running, destroyed, status, initLock };

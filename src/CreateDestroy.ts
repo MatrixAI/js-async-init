@@ -1,6 +1,9 @@
+import type { Status } from './types';
 import {
   _destroyed,
   destroyed,
+  _status,
+  status,
   initLock,
   RWLock,
   AsyncFunction,
@@ -11,6 +14,7 @@ import { ErrorAsyncInitDestroyed } from './errors';
 
 interface CreateDestroy<DestroyReturn = unknown> {
   get [destroyed](): boolean;
+  get [status](): Status;
   readonly [initLock]: RWLock;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
@@ -27,14 +31,20 @@ function CreateDestroy<DestroyReturn = unknown>() {
   ) => {
     return class extends constructor {
       public [_destroyed]: boolean = false;
+      public [_status]: Status = null;
       public readonly [initLock]: RWLock = new RWLock();
 
       public get [destroyed](): boolean {
         return this[_destroyed];
       }
 
+      public get [status](): Status {
+        return this[_status];
+      }
+
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
         const release = await this[initLock].acquireWrite();
+        this[_status] = 'destroying';
         try {
           if (this[_destroyed]) {
             return;
@@ -46,6 +56,7 @@ function CreateDestroy<DestroyReturn = unknown>() {
           this[_destroyed] = true;
           return result;
         } finally {
+          this[_status] = null;
           release();
         }
       }
@@ -146,4 +157,4 @@ function ready(
   };
 }
 
-export { CreateDestroy, ready, destroyed, initLock };
+export { CreateDestroy, ready, destroyed, status, initLock };

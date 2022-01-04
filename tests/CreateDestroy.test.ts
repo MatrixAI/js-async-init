@@ -1,5 +1,11 @@
 import { Mutex, tryAcquire } from 'async-mutex';
-import { CreateDestroy, ready, destroyed, initLock } from '@/CreateDestroy';
+import {
+  CreateDestroy,
+  ready,
+  destroyed,
+  status,
+  initLock,
+} from '@/CreateDestroy';
 import { ErrorAsyncInitDestroyed } from '@/errors';
 import * as testUtils from './utils';
 
@@ -22,6 +28,7 @@ describe('CreateDestroy', () => {
       }
 
       public async destroy(): Promise<void> {
+        expect(this[status]).toBe('destroying');
         destroyMock();
       }
 

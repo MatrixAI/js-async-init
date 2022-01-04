@@ -4,6 +4,7 @@ import {
   ready,
   running,
   destroyed,
+  status,
   initLock,
 } from '@/CreateDestroyStartStop';
 import {
@@ -36,15 +37,18 @@ describe('CreateDestroyStartStop', () => {
       }
 
       public async start(): Promise<string> {
+        expect(this[status]).toBe('starting');
         startMock();
         return 'hello world';
       }
 
       public async stop(): Promise<void> {
+        expect(this[status]).toBe('stopping');
         stopMock();
       }
 
       public async destroy(): Promise<void> {
+        expect(this[status]).toBe('destroying');
         destroyMock();
       }
 
