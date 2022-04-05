@@ -1,12 +1,20 @@
-import { CustomError } from 'ts-custom-error';
+import { AbstractError } from '@matrixai/errors';
 
-class ErrorAsyncInit extends CustomError {}
+class ErrorAsyncInit<T> extends AbstractError<T> {
+  static description = 'Async init error';
+}
 
-class ErrorAsyncInitRunning extends ErrorAsyncInit {}
+class ErrorAsyncInitRunning<T> extends ErrorAsyncInit<T> {
+  static description = 'Async init is running';
+}
 
-class ErrorAsyncInitNotRunning extends ErrorAsyncInit {}
+class ErrorAsyncInitNotRunning<T> extends ErrorAsyncInit<T> {
+  static description = 'Async init is not running';
+}
 
-class ErrorAsyncInitDestroyed extends ErrorAsyncInit {}
+class ErrorAsyncInitDestroyed<T> extends ErrorAsyncInit<T> {
+  static description = 'Async init is destroyed';
+}
 
 export {
   ErrorAsyncInit,

@@ -1,11 +1,11 @@
 import type { Status } from './types';
+import { RWLockWriter } from '@matrixai/async-locks';
 import {
   _destroyed,
   destroyed,
   _status,
   status,
   initLock,
-  RWLock,
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
@@ -15,7 +15,7 @@ import { ErrorAsyncInitDestroyed } from './errors';
 interface CreateDestroy<DestroyReturn = unknown> {
   get [destroyed](): boolean;
   get [status](): Status;
-  readonly [initLock]: RWLock;
+  readonly [initLock]: RWLockWriter;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
 
@@ -32,7 +32,7 @@ function CreateDestroy<DestroyReturn = unknown>() {
     return class extends constructor {
       public [_destroyed]: boolean = false;
       public [_status]: Status = null;
-      public readonly [initLock]: RWLock = new RWLock();
+      public readonly [initLock]: RWLockWriter = new RWLockWriter();
 
       public get [destroyed](): boolean {
         return this[_destroyed];
@@ -43,22 +43,22 @@ function CreateDestroy<DestroyReturn = unknown>() {
       }
 
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
-        const release = await this[initLock].acquireWrite();
-        this[_status] = 'destroying';
-        try {
-          if (this[_destroyed]) {
-            return;
+        return this[initLock].withWriteF(async () => {
+          this[_status] = 'destroying';
+          try {
+            if (this[_destroyed]) {
+              return;
+            }
+            let result;
+            if (typeof super['destroy'] === 'function') {
+              result = await super.destroy(...args);
+            }
+            this[_destroyed] = true;
+            return result;
+          } finally {
+            this[_status] = null;
           }
-          let result;
-          if (typeof super['destroy'] === 'function') {
-            result = await super.destroy(...args);
-          }
-          this[_destroyed] = true;
-          return result;
-        } finally {
-          this[_status] = null;
-          release();
-        }
+        });
       }
     };
   };
@@ -84,16 +84,12 @@ function ready(
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
         if (block) {
-          const release = await this[initLock].acquireRead();
-          try {
+          return this[initLock].withReadF(async () => {
             if (this[_destroyed]) {
               throw errorDestroyed;
             }
-            // Await the async operation before releasing
-            return await f.apply(this, args);
-          } finally {
-            release();
-          }
+            return f.apply(this, args);
+          });
         } else {
           if (this[initLock].isLocked()) {
             throw errorDestroyed;
@@ -119,15 +115,12 @@ function ready(
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
         if (block) {
-          const release = await this[initLock].acquireRead();
-          try {
+          yield* this[initLock].withReadG(() => {
             if (this[_destroyed]) {
               throw errorDestroyed;
             }
-            yield* f.apply(this, args);
-          } finally {
-            release();
-          }
+            return f.apply(this, args);
+          });
         } else {
           if (this[initLock].isLocked()) {
             throw errorDestroyed;
