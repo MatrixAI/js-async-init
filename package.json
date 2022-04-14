@@ -19,7 +19,7 @@
     "docs": "rm -r ./docs || true; typedoc --gitRevision master --tsconfig ./tsconfig.build.json --out ./docs src && touch ./docs/.nojekyll"
   },
   "dependencies": {
-    "@matrixai/async-locks": "^2.1.0",
+    "@matrixai/async-locks": "^2.2.0",
     "@matrixai/errors": "^1.0.1"
   },
   "devDependencies": {
