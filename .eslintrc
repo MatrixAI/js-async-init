@@ -13,6 +13,9 @@
     "plugin:prettier/recommended",
     "prettier"
   ],
+  "plugins": [
+    "import"
+  ],
   "parserOptions": {
     "project": "tsconfig.json",
     "sourceType": "module"
@@ -25,6 +28,7 @@
     "no-constant-condition": 0,
     "no-useless-escape": 0,
     "no-console": "error",
+    "require-yield": 0,
     "eqeqeq": ["error", "smart"],
     "spaced-comment": [
       "warn",
@@ -38,7 +42,6 @@
         }
       }
     ],
-    "require-yield": 0,
     "capitalized-comments": [
       "warn",
       "always",
@@ -47,7 +50,34 @@
         "ignoreConsecutiveComments": true
       }
     ],
-    "@typescript-eslint/ban-types": 0,
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          "type",
+          "builtin",
+          "external",
+          "internal",
+          "index",
+          "sibling",
+          "parent",
+          "object"
+        ],
+        "pathGroups": [
+          {
+            "pattern": "@",
+            "group": "internal"
+          },
+          {
+            "pattern": "@/**",
+            "group": "internal"
+          }
+        ],
+        "pathGroupsExcludedImportTypes": [
+          "type"
+        ]
+      }
+    ],
     "@typescript-eslint/no-namespace": 0,
     "@typescript-eslint/no-explicit-any": 0,
     "@typescript-eslint/explicit-module-boundary-types": 0,
@@ -92,7 +122,7 @@
       },
       {
         "selector": "variable",
-        "format": ["camelCase", "PascalCase", "UPPER_CASE"],
+        "format": ["camelCase", "UPPER_CASE", "PascalCase"],
         "leadingUnderscore": "allow",
         "trailingUnderscore": "allowSingleOrDouble"
       },

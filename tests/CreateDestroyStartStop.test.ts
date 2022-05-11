@@ -278,6 +278,23 @@ describe('CreateDestroyStartStop', () => {
     await y.destroy();
     expect(destroyMock.mock.calls.length).toBe(1);
   });
+  test('name is preserved', () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      static g() {
+        return this.name;
+      }
+      prop = [this.constructor.name];
+      public f() {
+        return this.constructor.name;
+      }
+    }
+    const x = new X();
+    expect(X.g()).toBe('X');
+    expect(x.f()).toBe('X');
+    expect(x.prop).toStrictEqual(['X']);
+  });
   test('symbols do not conflict with existing properties', async () => {
     interface X extends CreateDestroyStartStop {}
     @CreateDestroyStartStop()

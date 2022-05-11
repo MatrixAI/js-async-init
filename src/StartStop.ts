@@ -31,7 +31,7 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>() {
   >(
     constructor: T,
   ) => {
-    return class extends constructor {
+    const constructor_ = class extends constructor {
       public [_running]: boolean = false;
       public [_status]: Status = null;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
@@ -82,6 +82,13 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>() {
         });
       }
     };
+    // Preserve the name
+    Object.defineProperty(
+      constructor_,
+      'name',
+      Object.getOwnPropertyDescriptor(constructor, 'name')!,
+    );
+    return constructor_;
   };
 }
 
@@ -98,7 +105,7 @@ function ready(
     } else if (descriptor.set != null) {
       kind = 'set';
     }
-    const f: Function = descriptor[kind];
+    const f: Function = descriptor[kind]; // eslint-disable-line @typescript-eslint/ban-types
     if (typeof f !== 'function') {
       throw new TypeError(`${key} is not a function`);
     }
