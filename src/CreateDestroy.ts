@@ -93,15 +93,18 @@ function ready(
         if (block) {
           return this[initLock].withReadF(async () => {
             if (this[_destroyed]) {
+              errorDestroyed.stack = new Error().stack ?? '';
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked()) {
+            errorDestroyed.stack = new Error().stack ?? '';
             throw errorDestroyed;
           }
           if (this[_destroyed]) {
+            errorDestroyed.stack = new Error().stack ?? '';
             throw errorDestroyed;
           }
           return f.apply(this, args);
@@ -112,9 +115,11 @@ function ready(
         // If locked, it is during destroy
         // Consider it already destroyed
         if (this[initLock].isLocked()) {
+          errorDestroyed.stack = new Error().stack ?? '';
           throw errorDestroyed;
         }
         if (this[_destroyed]) {
+          errorDestroyed.stack = new Error().stack ?? '';
           throw errorDestroyed;
         }
         yield* f.apply(this, args);
@@ -124,15 +129,18 @@ function ready(
         if (block) {
           yield* this[initLock].withReadG(() => {
             if (this[_destroyed]) {
+              errorDestroyed.stack = new Error().stack ?? '';
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked()) {
+            errorDestroyed.stack = new Error().stack ?? '';
             throw errorDestroyed;
           }
           if (this[_destroyed]) {
+            errorDestroyed.stack = new Error().stack ?? '';
             throw errorDestroyed;
           }
           yield* f.apply(this, args);
@@ -143,9 +151,11 @@ function ready(
         // If locked, it is during destroy
         // Consider it already destroyed
         if (this[initLock].isLocked()) {
+          errorDestroyed.stack = new Error().stack ?? '';
           throw errorDestroyed;
         }
         if (this[_destroyed]) {
+          errorDestroyed.stack = new Error().stack ?? '';
           throw errorDestroyed;
         }
         return f.apply(this, args);
