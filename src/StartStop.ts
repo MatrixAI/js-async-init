@@ -114,15 +114,18 @@ function ready(
         if (block) {
           return this[initLock].withReadF(async () => {
             if (!this[_running]) {
+              errorNotRunning.stack = new Error().stack ?? '';
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked()) {
+            errorNotRunning.stack = new Error().stack ?? '';
             throw errorNotRunning;
           }
           if (!this[_running]) {
+            errorNotRunning.stack = new Error().stack ?? '';
             throw errorNotRunning;
           }
           return f.apply(this, args);
@@ -131,9 +134,11 @@ function ready(
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
         if (this[initLock].isLocked()) {
+          errorNotRunning.stack = new Error().stack ?? '';
           throw errorNotRunning;
         }
         if (!this[_running]) {
+          errorNotRunning.stack = new Error().stack ?? '';
           throw errorNotRunning;
         }
         yield* f.apply(this, args);
@@ -143,15 +148,18 @@ function ready(
         if (block) {
           yield* this[initLock].withReadG(() => {
             if (!this[_running]) {
+              errorNotRunning.stack = new Error().stack ?? '';
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked()) {
+            errorNotRunning.stack = new Error().stack ?? '';
             throw errorNotRunning;
           }
           if (!this[_running]) {
+            errorNotRunning.stack = new Error().stack ?? '';
             throw errorNotRunning;
           }
           yield* f.apply(this, args);
@@ -160,9 +168,11 @@ function ready(
     } else {
       descriptor[kind] = function (...args) {
         if (this[initLock].isLocked()) {
+          errorNotRunning.stack = new Error().stack ?? '';
           throw errorNotRunning;
         }
         if (!this[_running]) {
+          errorNotRunning.stack = new Error().stack ?? '';
           throw errorNotRunning;
         }
         return f.apply(this, args);
