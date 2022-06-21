@@ -74,6 +74,7 @@ function CreateDestroy<DestroyReturn = unknown>() {
 function ready(
   errorDestroyed: Error = new ErrorAsyncInitDestroyed(),
   block: boolean = false,
+  allowedStatuses: Array<Status> = [],
 ) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
     let kind;
@@ -90,21 +91,20 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
+        if (allowedStatuses.includes(this[_status])) {
+          return f.apply(this, args);
+        }
         if (block) {
           return this[initLock].withReadF(async () => {
             if (this[_destroyed]) {
-              errorDestroyed.stack = new Error().stack ?? '';
+              errorDestroyed.stack = new Error().stack;
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
-          if (this[initLock].isLocked()) {
-            errorDestroyed.stack = new Error().stack ?? '';
-            throw errorDestroyed;
-          }
-          if (this[_destroyed]) {
-            errorDestroyed.stack = new Error().stack ?? '';
+          if (this[initLock].isLocked('write') || this[_destroyed]) {
+            errorDestroyed.stack = new Error().stack;
             throw errorDestroyed;
           }
           return f.apply(this, args);
@@ -112,50 +112,43 @@ function ready(
       };
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
-        // If locked, it is during destroy
-        // Consider it already destroyed
-        if (this[initLock].isLocked()) {
-          errorDestroyed.stack = new Error().stack ?? '';
+        if (allowedStatuses.includes(this[_status])) {
+          return yield* f.apply(this, args);
+        }
+        if (this[initLock].isLocked('write') || this[_destroyed]) {
+          errorDestroyed.stack = new Error().stack;
           throw errorDestroyed;
         }
-        if (this[_destroyed]) {
-          errorDestroyed.stack = new Error().stack ?? '';
-          throw errorDestroyed;
-        }
-        yield* f.apply(this, args);
+        return yield* f.apply(this, args);
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
+        if (allowedStatuses.includes(this[_status])) {
+          return yield* f.apply(this, args);
+        }
         if (block) {
-          yield* this[initLock].withReadG(() => {
+          return yield* this[initLock].withReadG(() => {
             if (this[_destroyed]) {
-              errorDestroyed.stack = new Error().stack ?? '';
+              errorDestroyed.stack = new Error().stack;
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
-          if (this[initLock].isLocked()) {
-            errorDestroyed.stack = new Error().stack ?? '';
+          if (this[initLock].isLocked('write') || this[_destroyed]) {
+            errorDestroyed.stack = new Error().stack;
             throw errorDestroyed;
           }
-          if (this[_destroyed]) {
-            errorDestroyed.stack = new Error().stack ?? '';
-            throw errorDestroyed;
-          }
-          yield* f.apply(this, args);
+          return yield* f.apply(this, args);
         }
       };
     } else {
       descriptor[kind] = function (...args) {
-        // If locked, it is during destroy
-        // Consider it already destroyed
-        if (this[initLock].isLocked()) {
-          errorDestroyed.stack = new Error().stack ?? '';
-          throw errorDestroyed;
+        if (allowedStatuses.includes(this[_status])) {
+          return f.apply(this, args);
         }
-        if (this[_destroyed]) {
-          errorDestroyed.stack = new Error().stack ?? '';
+        if (this[initLock].isLocked('write') || this[_destroyed]) {
+          errorDestroyed.stack = new Error().stack;
           throw errorDestroyed;
         }
         return f.apply(this, args);

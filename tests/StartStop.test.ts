@@ -503,6 +503,51 @@ describe('StartStop', () => {
     expect(x[initLock].writerCount).toBe(0);
     await x.stop();
   });
+  test('calling async blocking methods do not affect non-blocking methods', async () => {
+    interface X extends StartStop {}
+    @StartStop()
+    class X {
+      @ready(undefined, true)
+      public async doSomethingAsyncBlocking() {
+        await testUtils.sleep(100);
+      }
+
+      @ready(undefined)
+      public async doSomethingAsync() {
+      }
+
+      @ready(undefined, true)
+      public async *doSomethingGenAsyncBlocking() {
+        await testUtils.sleep(100);
+        yield 1;
+        await testUtils.sleep(100);
+        yield 2;
+      }
+
+      @ready(undefined)
+      public async *doSomethingGenAsync() {
+        yield 1;
+        yield 2;
+      }
+    }
+    const x = new X();
+    await x.start();
+    await expect(
+      (async () => {
+        const blockingP = x.doSomethingAsyncBlocking();
+        await x.doSomethingAsync();
+        for await (const _ of x.doSomethingGenAsync()) { }
+        await blockingP;
+      })()
+    ).resolves.toBeUndefined();
+    await expect((async () => {
+      for await (const _ of x.doSomethingGenAsyncBlocking()) {
+        for await (const _ of x.doSomethingGenAsync()) { }
+        await x.doSomethingAsync();
+      }
+    })()).resolves.toBeUndefined();
+    await x.stop();
+  });
   test('stop can interrupt concurrent blocking methods', async () => {
     interface X extends StartStop<void, void> {}
     @StartStop<void, void>()
