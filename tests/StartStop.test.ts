@@ -108,7 +108,20 @@ describe('StartStop', () => {
     await expect(
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    // Also not ready during idempotent `x.start`
     await x.start();
+    const startP = x.start();
+    expect(x.doSomethingSync.bind(x)).toThrow(ErrorAsyncInitNotRunning);
+    await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(
+      ErrorAsyncInitNotRunning,
+    );
+    expect(() => x.doSomethingGenSync().next()).toThrow(
+      ErrorAsyncInitNotRunning,
+    );
+    await expect(
+      async () => await x.doSomethingGenAsync().next(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await startP;
     // Ready
     x.doSomethingSync();
     await x.doSomethingAsync();
