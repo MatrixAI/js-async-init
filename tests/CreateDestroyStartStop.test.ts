@@ -871,6 +871,33 @@ describe('CreateDestroyStartStop', () => {
     await x.stop();
     await x.destroy();
   });
+  test('calling generator methods propagate return value', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      @ready(undefined)
+      public *doSomethingGenSync() {
+        yield 1;
+        return 2;
+      }
+
+      @ready(undefined)
+      public async *doSomethingGenAsync() {
+        yield 3;
+        return 4;
+      }
+    }
+    const x = new X();
+    await x.start();
+    const gSync = x.doSomethingGenSync();
+    expect(gSync.next()).toStrictEqual({ value: 1, done: false});
+    expect(gSync.next()).toStrictEqual({ value: 2, done: true});
+    const gAsync = x.doSomethingGenAsync();
+    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false});
+    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true});
+    await x.stop();
+    await x.destroy();
+  });
   test('stop can interrupt concurrent blocking methods', async () => {
     interface X extends CreateDestroyStartStop<void, void> {}
     @CreateDestroyStartStop<void, void>()
