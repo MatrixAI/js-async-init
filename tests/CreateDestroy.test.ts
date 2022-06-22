@@ -534,8 +534,7 @@ describe('CreateDestroy', () => {
       }
 
       @ready(undefined)
-      public async doSomethingAsync() {
-      }
+      public async doSomethingAsync() {}
 
       @ready(undefined, true)
       public async *doSomethingGenAsyncBlocking() {
@@ -556,16 +555,20 @@ describe('CreateDestroy', () => {
       (async () => {
         const blockingP = x.doSomethingAsyncBlocking();
         await x.doSomethingAsync();
-        for await (const _ of x.doSomethingGenAsync()) { }
+        for await (const _ of x.doSomethingGenAsync()) {
+        }
         await blockingP;
-      })()
+      })(),
     ).resolves.toBeUndefined();
-    await expect((async () => {
-      for await (const _ of x.doSomethingGenAsyncBlocking()) {
-        for await (const _ of x.doSomethingGenAsync()) { }
-        await x.doSomethingAsync();
-      }
-    })()).resolves.toBeUndefined();
+    await expect(
+      (async () => {
+        for await (const _ of x.doSomethingGenAsyncBlocking()) {
+          for await (const _ of x.doSomethingGenAsync()) {
+          }
+          await x.doSomethingAsync();
+        }
+      })(),
+    ).resolves.toBeUndefined();
     await x.destroy();
   });
   test('calling generator methods propagate return value', async () => {
@@ -586,11 +589,11 @@ describe('CreateDestroy', () => {
     }
     const x = new X();
     const gSync = x.doSomethingGenSync();
-    expect(gSync.next()).toStrictEqual({ value: 1, done: false});
-    expect(gSync.next()).toStrictEqual({ value: 2, done: true});
+    expect(gSync.next()).toStrictEqual({ value: 1, done: false });
+    expect(gSync.next()).toStrictEqual({ value: 2, done: true });
     const gAsync = x.doSomethingGenAsync();
-    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false});
-    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true});
+    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false });
+    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true });
     await x.destroy();
   });
   test('calling methods with allowed statuses', async () => {
@@ -603,8 +606,10 @@ describe('CreateDestroy', () => {
     class X {
       public async destroy(): Promise<Error> {
         this.doSomethingSync();
-        for (const _ of this.doSomethingGenSync()){ }
-        for await (const _ of this.doSomethingGenAsync()){ }
+        for (const _ of this.doSomethingGenSync()) {
+        }
+        for await (const _ of this.doSomethingGenAsync()) {
+        }
         try {
           await this.doSomethingAsync();
         } catch (e) {

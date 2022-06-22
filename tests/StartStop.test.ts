@@ -526,8 +526,7 @@ describe('StartStop', () => {
       }
 
       @ready(undefined)
-      public async doSomethingAsync() {
-      }
+      public async doSomethingAsync() {}
 
       @ready(undefined, true)
       public async *doSomethingGenAsyncBlocking() {
@@ -549,16 +548,20 @@ describe('StartStop', () => {
       (async () => {
         const blockingP = x.doSomethingAsyncBlocking();
         await x.doSomethingAsync();
-        for await (const _ of x.doSomethingGenAsync()) { }
+        for await (const _ of x.doSomethingGenAsync()) {
+        }
         await blockingP;
-      })()
+      })(),
     ).resolves.toBeUndefined();
-    await expect((async () => {
-      for await (const _ of x.doSomethingGenAsyncBlocking()) {
-        for await (const _ of x.doSomethingGenAsync()) { }
-        await x.doSomethingAsync();
-      }
-    })()).resolves.toBeUndefined();
+    await expect(
+      (async () => {
+        for await (const _ of x.doSomethingGenAsyncBlocking()) {
+          for await (const _ of x.doSomethingGenAsync()) {
+          }
+          await x.doSomethingAsync();
+        }
+      })(),
+    ).resolves.toBeUndefined();
     await x.stop();
   });
   test('calling generator methods propagate return value', async () => {
@@ -580,11 +583,11 @@ describe('StartStop', () => {
     const x = new X();
     await x.start();
     const gSync = x.doSomethingGenSync();
-    expect(gSync.next()).toStrictEqual({ value: 1, done: false});
-    expect(gSync.next()).toStrictEqual({ value: 2, done: true});
+    expect(gSync.next()).toStrictEqual({ value: 1, done: false });
+    expect(gSync.next()).toStrictEqual({ value: 2, done: true });
     const gAsync = x.doSomethingGenAsync();
-    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false});
-    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true});
+    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false });
+    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true });
     await x.stop();
   });
   test('calling methods with allowed statuses', async () => {
@@ -597,9 +600,11 @@ describe('StartStop', () => {
     class X {
       public async start(): Promise<Error> {
         this.doSomethingSync();
-        for (const _ of this.doSomethingGenSync()){ }
+        for (const _ of this.doSomethingGenSync()) {
+        }
         try {
-          for await (const _ of this.doSomethingGenAsync()){ }
+          for await (const _ of this.doSomethingGenAsync()) {
+          }
         } catch (e) {
           return e;
         }
@@ -608,9 +613,11 @@ describe('StartStop', () => {
 
       public async stop(): Promise<Error> {
         await this.doSomethingAsync();
-        for (const _ of this.doSomethingGenSync()){ }
+        for (const _ of this.doSomethingGenSync()) {
+        }
         try {
-          for await (const _ of this.doSomethingGenAsync()){ }
+          for await (const _ of this.doSomethingGenAsync()) {
+          }
         } catch (e) {
           return e;
         }
