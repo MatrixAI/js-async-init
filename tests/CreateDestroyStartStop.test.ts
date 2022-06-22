@@ -348,7 +348,20 @@ describe('CreateDestroyStartStop', () => {
     await expect(
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    // Also not ready during idempotent `x.start`
     await x.start();
+    const startP = x.start();
+    expect(x.doSomethingSync.bind(x)).toThrow(ErrorAsyncInitNotRunning);
+    await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(
+      ErrorAsyncInitNotRunning,
+    );
+    expect(() => x.doSomethingGenSync().next()).toThrow(
+      ErrorAsyncInitNotRunning,
+    );
+    await expect(
+      async () => await x.doSomethingGenAsync().next(),
+    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    await startP;
     // Ready
     x.doSomethingSync();
     await x.doSomethingAsync();
@@ -824,6 +837,159 @@ describe('CreateDestroyStartStop', () => {
     expect(x[initLock].writerCount).toBe(0);
     await x.stop();
     await x.destroy();
+  });
+  test('calling async blocking methods do not affect non-blocking methods', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      @ready(undefined, true)
+      public async doSomethingAsyncBlocking() {
+        await testUtils.sleep(100);
+      }
+
+      @ready(undefined)
+      public async doSomethingAsync() {}
+
+      @ready(undefined, true)
+      public async *doSomethingGenAsyncBlocking() {
+        await testUtils.sleep(100);
+        yield 1;
+        await testUtils.sleep(100);
+        yield 2;
+      }
+
+      @ready(undefined)
+      public async *doSomethingGenAsync() {
+        yield 1;
+        yield 2;
+      }
+    }
+    const x = new X();
+    await x.start();
+    await expect(
+      (async () => {
+        const blockingP = x.doSomethingAsyncBlocking();
+        await x.doSomethingAsync();
+        for await (const _ of x.doSomethingGenAsync()) {
+        }
+        await blockingP;
+      })(),
+    ).resolves.toBeUndefined();
+    await expect(
+      (async () => {
+        for await (const _ of x.doSomethingGenAsyncBlocking()) {
+          for await (const _ of x.doSomethingGenAsync()) {
+          }
+          await x.doSomethingAsync();
+        }
+      })(),
+    ).resolves.toBeUndefined();
+    await x.stop();
+    await x.destroy();
+  });
+  test('calling generator methods propagate return value', async () => {
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      @ready(undefined)
+      public *doSomethingGenSync() {
+        yield 1;
+        return 2;
+      }
+
+      @ready(undefined)
+      public async *doSomethingGenAsync() {
+        yield 3;
+        return 4;
+      }
+    }
+    const x = new X();
+    await x.start();
+    const gSync = x.doSomethingGenSync();
+    expect(gSync.next()).toStrictEqual({ value: 1, done: false });
+    expect(gSync.next()).toStrictEqual({ value: 2, done: true });
+    const gAsync = x.doSomethingGenAsync();
+    expect(await gAsync.next()).toStrictEqual({ value: 3, done: false });
+    expect(await gAsync.next()).toStrictEqual({ value: 4, done: true });
+    await x.stop();
+    await x.destroy();
+  });
+  test('calling methods with allowed statuses', async () => {
+    const doSomethingSyncMock = jest.fn();
+    const doSomethingAsyncMock = jest.fn();
+    const doSomethingGenSyncMock = jest.fn();
+    const doSomethingGenAsyncMock = jest.fn();
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {
+      public async start(): Promise<Error> {
+        this.doSomethingSync();
+        for (const _ of this.doSomethingGenSync()) {
+        }
+        try {
+          for await (const _ of this.doSomethingGenAsync()) {
+          }
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      public async stop(): Promise<Error> {
+        await this.doSomethingAsync();
+        for await (const _ of this.doSomethingGenAsync()) {
+        }
+        try {
+          for (const _ of this.doSomethingGenSync()) {
+          }
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      public async destroy(): Promise<Error> {
+        for (const _ of this.doSomethingGenSync()) {
+        }
+        for await (const _ of this.doSomethingGenAsync()) {
+        }
+        try {
+          await this.doSomethingAsync();
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      @ready(undefined, true, ['starting'])
+      public doSomethingSync() {
+        doSomethingSyncMock();
+      }
+
+      @ready(undefined, false, ['stopping'])
+      public async doSomethingAsync() {
+        doSomethingAsyncMock();
+      }
+
+      // The `block` is ignored when the `[status]` matches the `allowedStatuses`
+      @ready(undefined, true, ['starting', 'destroying'])
+      public *doSomethingGenSync() {
+        doSomethingGenSyncMock();
+      }
+
+      @ready(undefined, false, ['stopping', 'destroying'])
+      public async *doSomethingGenAsync() {
+        doSomethingGenAsyncMock();
+      }
+    }
+    const x = new X();
+    expect(await x.start()).toBeInstanceOf(ErrorAsyncInitNotRunning);
+    expect(await x.stop()).toBeInstanceOf(ErrorAsyncInitNotRunning);
+    expect(await x.destroy()).toBeInstanceOf(ErrorAsyncInitNotRunning);
+    expect(doSomethingAsyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingSyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingGenSyncMock.mock.calls.length).toBe(2);
+    expect(doSomethingGenAsyncMock.mock.calls.length).toBe(2);
   });
   test('stop can interrupt concurrent blocking methods', async () => {
     interface X extends CreateDestroyStartStop<void, void> {}

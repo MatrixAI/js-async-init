@@ -20,7 +20,7 @@
     "docs": "rm -r ./docs || true; typedoc --gitRevision master --tsconfig ./tsconfig.build.json --out ./docs src"
   },
   "dependencies": {
-    "@matrixai/async-locks": "^2.2.4",
+    "@matrixai/async-locks": "^2.3.1",
     "@matrixai/errors": "^1.1.1"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
     "@types/node": "^16.11.7",
     "@typescript-eslint/eslint-plugin": "^5.23.0",
     "@typescript-eslint/parser": "^5.23.0",
+    "async-mutex": "^0.3.2",
     "eslint": "^8.15.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",

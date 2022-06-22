@@ -153,6 +153,7 @@ function CreateDestroyStartStop<
 function ready(
   errorNotRunning: Error = new ErrorAsyncInitNotRunning(),
   block: boolean = false,
+  allowedStatuses: Array<Status> = [],
 ) {
   return (target: any, key: string, descriptor: PropertyDescriptor) => {
     let kind;
@@ -169,21 +170,20 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
+        if (allowedStatuses.includes(this[_status])) {
+          return f.apply(this, args);
+        }
         if (block) {
           return this[initLock].withReadF(async () => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack ?? '';
+              errorNotRunning.stack = new Error().stack;
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
-          if (this[initLock].isLocked()) {
-            errorNotRunning.stack = new Error().stack ?? '';
-            throw errorNotRunning;
-          }
-          if (!this[_running]) {
-            errorNotRunning.stack = new Error().stack ?? '';
+          if (this[initLock].isLocked('write') || !this[_running]) {
+            errorNotRunning.stack = new Error().stack;
             throw errorNotRunning;
           }
           return f.apply(this, args);
@@ -191,46 +191,43 @@ function ready(
       };
     } else if (f instanceof GeneratorFunction) {
       descriptor[kind] = function* (...args) {
-        if (this[initLock].isLocked()) {
-          errorNotRunning.stack = new Error().stack ?? '';
+        if (allowedStatuses.includes(this[_status])) {
+          return yield* f.apply(this, args);
+        }
+        if (this[initLock].isLocked('write') || !this[_running]) {
+          errorNotRunning.stack = new Error().stack;
           throw errorNotRunning;
         }
-        if (!this[_running]) {
-          errorNotRunning.stack = new Error().stack ?? '';
-          throw errorNotRunning;
-        }
-        yield* f.apply(this, args);
+        return yield* f.apply(this, args);
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
+        if (allowedStatuses.includes(this[_status])) {
+          return yield* f.apply(this, args);
+        }
         if (block) {
-          yield* this[initLock].withReadG(() => {
+          return yield* this[initLock].withReadG(() => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack ?? '';
+              errorNotRunning.stack = new Error().stack;
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
-          if (this[initLock].isLocked()) {
-            errorNotRunning.stack = new Error().stack ?? '';
+          if (this[initLock].isLocked('write') || !this[_running]) {
+            errorNotRunning.stack = new Error().stack;
             throw errorNotRunning;
           }
-          if (!this[_running]) {
-            errorNotRunning.stack = new Error().stack ?? '';
-            throw errorNotRunning;
-          }
-          yield* f.apply(this, args);
+          return yield* f.apply(this, args);
         }
       };
     } else {
       descriptor[kind] = function (...args) {
-        if (this[initLock].isLocked()) {
-          errorNotRunning.stack = new Error().stack ?? '';
-          throw errorNotRunning;
+        if (allowedStatuses.includes(this[_status])) {
+          return f.apply(this, args);
         }
-        if (!this[_running]) {
-          errorNotRunning.stack = new Error().stack ?? '';
+        if (this[initLock].isLocked('write') || !this[_running]) {
+          errorNotRunning.stack = new Error().stack;
           throw errorNotRunning;
         }
         return f.apply(this, args);

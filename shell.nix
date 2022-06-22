@@ -1,7 +1,7 @@
 { pkgs ? import ./pkgs.nix {} }:
 
 with pkgs;
-pkgs.mkShell {
+mkShell {
   nativeBuildInputs = [
     nodejs
     nodePackages.node2nix
@@ -13,9 +13,15 @@ pkgs.mkShell {
     set +o allexport
     set -v
 
-    export PATH="$(pwd)/dist/bin:$(npm bin):$PATH"
-    npm install
     mkdir --parents "$(pwd)/tmp"
+
+    # Built executables and NPM executables
+    export PATH="$(pwd)/dist/bin:$(npm bin):$PATH"
+
+    # Enables npm link
+    export npm_config_prefix=~/.npm
+
+    npm install --ignore-scripts
 
     set +v
   '';
