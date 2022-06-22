@@ -593,6 +593,54 @@ describe('CreateDestroy', () => {
     expect(await gAsync.next()).toStrictEqual({ value: 4, done: true});
     await x.destroy();
   });
+  test('calling methods with allowed statuses', async () => {
+    const doSomethingSyncMock = jest.fn();
+    const doSomethingAsyncMock = jest.fn();
+    const doSomethingGenSyncMock = jest.fn();
+    const doSomethingGenAsyncMock = jest.fn();
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      public async destroy(): Promise<Error> {
+        this.doSomethingSync();
+        for (const _ of this.doSomethingGenSync()){ }
+        for await (const _ of this.doSomethingGenAsync()){ }
+        try {
+          await this.doSomethingAsync();
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      @ready(undefined, false, ['destroying'])
+      public doSomethingSync() {
+        doSomethingSyncMock();
+      }
+
+      @ready(undefined, false)
+      public async doSomethingAsync() {
+        doSomethingAsyncMock();
+      }
+
+      // The `block` is ignored when the `[status]` matches the `allowedStatuses`
+      @ready(undefined, true, ['destroying'])
+      public *doSomethingGenSync() {
+        doSomethingGenSyncMock();
+      }
+
+      @ready(undefined, false, ['destroying'])
+      public async *doSomethingGenAsync() {
+        doSomethingGenAsyncMock();
+      }
+    }
+    const x = new X();
+    expect(await x.destroy()).toBeInstanceOf(ErrorAsyncInitDestroyed);
+    expect(doSomethingAsyncMock.mock.calls.length).toBe(0);
+    expect(doSomethingSyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingGenSyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingGenAsyncMock.mock.calls.length).toBe(1);
+  });
   test('destroy can interrupt concurrent blocking methods', async () => {
     interface X extends CreateDestroy<void> {}
     @CreateDestroy<void>()

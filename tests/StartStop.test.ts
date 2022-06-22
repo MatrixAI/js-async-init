@@ -587,6 +587,65 @@ describe('StartStop', () => {
     expect(await gAsync.next()).toStrictEqual({ value: 4, done: true});
     await x.stop();
   });
+  test('calling methods with allowed statuses', async () => {
+    const doSomethingSyncMock = jest.fn();
+    const doSomethingAsyncMock = jest.fn();
+    const doSomethingGenSyncMock = jest.fn();
+    const doSomethingGenAsyncMock = jest.fn();
+    interface X extends StartStop {}
+    @StartStop()
+    class X {
+      public async start(): Promise<Error> {
+        this.doSomethingSync();
+        for (const _ of this.doSomethingGenSync()){ }
+        try {
+          for await (const _ of this.doSomethingGenAsync()){ }
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      public async stop(): Promise<Error> {
+        await this.doSomethingAsync();
+        for (const _ of this.doSomethingGenSync()){ }
+        try {
+          for await (const _ of this.doSomethingGenAsync()){ }
+        } catch (e) {
+          return e;
+        }
+        throw new Error();
+      }
+
+      @ready(undefined, false, ['starting'])
+      public doSomethingSync() {
+        doSomethingSyncMock();
+      }
+
+      @ready(undefined, false, ['stopping'])
+      public async doSomethingAsync() {
+        doSomethingAsyncMock();
+      }
+
+      // The `block` is ignored when the `[status]` matches the `allowedStatuses`
+      @ready(undefined, true, ['starting', 'stopping'])
+      public *doSomethingGenSync() {
+        doSomethingGenSyncMock();
+      }
+
+      @ready(undefined, false, [])
+      public async *doSomethingGenAsync() {
+        doSomethingGenAsyncMock();
+      }
+    }
+    const x = new X();
+    expect(await x.start()).toBeInstanceOf(ErrorAsyncInitNotRunning);
+    expect(await x.stop()).toBeInstanceOf(ErrorAsyncInitNotRunning);
+    expect(doSomethingAsyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingSyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingGenSyncMock.mock.calls.length).toBe(2);
+    expect(doSomethingGenAsyncMock.mock.calls.length).toBe(0);
+  });
   test('stop can interrupt concurrent blocking methods', async () => {
     interface X extends StartStop<void, void> {}
     @StartStop<void, void>()
