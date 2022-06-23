@@ -191,6 +191,60 @@ describe('CreateDestroy', () => {
     expect(x.f()).toBe('X');
     expect(x.prop).toStrictEqual(['X']);
   });
+  test('exception name is preserved', async () => {
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {
+      @ready()
+      public doSomethingSync() {}
+
+      @ready(new Error())
+      public async doSomethingAsync() {}
+
+      @ready(new ReferenceError('foo'))
+      public *doSomethingGenSync() {}
+
+      @ready(new TypeError('abc'))
+      public async *doSomethingGenAsync() {}
+    }
+    const x = new X();
+    await x.destroy();
+    let e;
+    try {
+      x.doSomethingSync();
+    } catch (e_) {
+      e = e_;
+    }
+    expect(e.name).toBe(ErrorAsyncInitDestroyed.name);
+    expect(e.stack!.slice(0, e.stack.indexOf('\n') + 1)).toBe(
+      `${e.name}: ${e.message}\n`,
+    );
+    try {
+      await x.doSomethingAsync();
+    } catch (e_) {
+      e = e_;
+    }
+    expect(e.name).toBe('Error');
+    expect(e.stack!.slice(0, e.stack.indexOf('\n') + 1)).toBe(`Error: \n`);
+    try {
+      x.doSomethingGenSync().next();
+    } catch (e_) {
+      e = e_;
+    }
+    expect(e.name).toBe('ReferenceError');
+    expect(e.stack!.slice(0, e.stack.indexOf('\n') + 1)).toBe(
+      `ReferenceError: foo\n`,
+    );
+    try {
+      await x.doSomethingGenAsync().next();
+    } catch (e_) {
+      e = e_;
+    }
+    expect(e.name).toBe('TypeError');
+    expect(e.stack!.slice(0, e.stack.indexOf('\n') + 1)).toBe(
+      `TypeError: abc\n`,
+    );
+  });
   test('symbols do not conflict with existing properties', async () => {
     interface X extends CreateDestroy {}
     @CreateDestroy()

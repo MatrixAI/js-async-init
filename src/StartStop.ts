@@ -9,6 +9,7 @@ import {
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
+  resetStackTrace,
 } from './utils';
 import { ErrorAsyncInitNotRunning } from './errors';
 
@@ -118,14 +119,14 @@ function ready(
         if (block) {
           return this[initLock].withReadF(async () => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack;
+              resetStackTrace(errorNotRunning, descriptor[kind]);
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || !this[_running]) {
-            errorNotRunning.stack = new Error().stack;
+            resetStackTrace(errorNotRunning, descriptor[kind]);
             throw errorNotRunning;
           }
           return f.apply(this, args);
@@ -137,7 +138,7 @@ function ready(
           return yield* f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || !this[_running]) {
-          errorNotRunning.stack = new Error().stack;
+          resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
         return yield* f.apply(this, args);
@@ -150,14 +151,14 @@ function ready(
         if (block) {
           return yield* this[initLock].withReadG(() => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack;
+              resetStackTrace(errorNotRunning, descriptor[kind]);
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || !this[_running]) {
-            errorNotRunning.stack = new Error().stack;
+            resetStackTrace(errorNotRunning, descriptor[kind]);
             throw errorNotRunning;
           }
           return yield* f.apply(this, args);
@@ -169,7 +170,7 @@ function ready(
           return f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || !this[_running]) {
-          errorNotRunning.stack = new Error().stack;
+          resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
         return f.apply(this, args);
