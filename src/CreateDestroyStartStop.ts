@@ -11,6 +11,7 @@ import {
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
+  resetStackTrace,
 } from './utils';
 import {
   ErrorAsyncInitRunning,
@@ -77,7 +78,8 @@ function CreateDestroyStartStop<
               return;
             }
             if (this[_running]) {
-              errorRunning.stack = new Error().stack ?? '';
+              // Unfortunately `this.destroy` doesn't work as the decorated function
+              resetStackTrace(errorRunning);
               throw errorRunning;
             }
             let result;
@@ -100,7 +102,8 @@ function CreateDestroyStartStop<
               return;
             }
             if (this[_destroyed]) {
-              errorDestroyed.stack = new Error().stack ?? '';
+              // Unfortunately `this.start` doesn't work as the decorated function
+              resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
             let result;
@@ -125,7 +128,8 @@ function CreateDestroyStartStop<
             if (this[_destroyed]) {
               // It is not possible to be running and destroyed
               // however this line is here for completion
-              errorDestroyed.stack = new Error().stack ?? '';
+              // Unfortunately `this.stop` doesn't work as the decorated function
+              resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
             let result;
@@ -176,14 +180,14 @@ function ready(
         if (block) {
           return this[initLock].withReadF(async () => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack;
+              resetStackTrace(errorNotRunning, descriptor[kind]);
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || !this[_running]) {
-            errorNotRunning.stack = new Error().stack;
+            resetStackTrace(errorNotRunning, descriptor[kind]);
             throw errorNotRunning;
           }
           return f.apply(this, args);
@@ -195,7 +199,7 @@ function ready(
           return yield* f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || !this[_running]) {
-          errorNotRunning.stack = new Error().stack;
+          resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
         return yield* f.apply(this, args);
@@ -208,14 +212,14 @@ function ready(
         if (block) {
           return yield* this[initLock].withReadG(() => {
             if (!this[_running]) {
-              errorNotRunning.stack = new Error().stack;
+              resetStackTrace(errorNotRunning, descriptor[kind]);
               throw errorNotRunning;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || !this[_running]) {
-            errorNotRunning.stack = new Error().stack;
+            resetStackTrace(errorNotRunning, descriptor[kind]);
             throw errorNotRunning;
           }
           return yield* f.apply(this, args);
@@ -227,7 +231,7 @@ function ready(
           return f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || !this[_running]) {
-          errorNotRunning.stack = new Error().stack;
+          resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
         return f.apply(this, args);

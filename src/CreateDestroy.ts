@@ -9,6 +9,7 @@ import {
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
+  resetStackTrace,
 } from './utils';
 import { ErrorAsyncInitDestroyed } from './errors';
 
@@ -97,14 +98,14 @@ function ready(
         if (block) {
           return this[initLock].withReadF(async () => {
             if (this[_destroyed]) {
-              errorDestroyed.stack = new Error().stack;
+              resetStackTrace(errorDestroyed, descriptor[kind]);
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || this[_destroyed]) {
-            errorDestroyed.stack = new Error().stack;
+            resetStackTrace(errorDestroyed, descriptor[kind]);
             throw errorDestroyed;
           }
           return f.apply(this, args);
@@ -116,7 +117,7 @@ function ready(
           return yield* f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || this[_destroyed]) {
-          errorDestroyed.stack = new Error().stack;
+          resetStackTrace(errorDestroyed, descriptor[kind]);
           throw errorDestroyed;
         }
         return yield* f.apply(this, args);
@@ -129,14 +130,14 @@ function ready(
         if (block) {
           return yield* this[initLock].withReadG(() => {
             if (this[_destroyed]) {
-              errorDestroyed.stack = new Error().stack;
+              resetStackTrace(errorDestroyed, descriptor[kind]);
               throw errorDestroyed;
             }
             return f.apply(this, args);
           });
         } else {
           if (this[initLock].isLocked('write') || this[_destroyed]) {
-            errorDestroyed.stack = new Error().stack;
+            resetStackTrace(errorDestroyed, descriptor[kind]);
             throw errorDestroyed;
           }
           return yield* f.apply(this, args);
@@ -148,7 +149,7 @@ function ready(
           return f.apply(this, args);
         }
         if (this[initLock].isLocked('write') || this[_destroyed]) {
-          errorDestroyed.stack = new Error().stack;
+          resetStackTrace(errorDestroyed, descriptor[kind]);
           throw errorDestroyed;
         }
         return f.apply(this, args);
