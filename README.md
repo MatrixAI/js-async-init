@@ -1,6 +1,7 @@
 # js-async-init
 
-[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-async-init/badges/master/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-async-init/commits/master)
+staging:[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-async-init/badges/staging/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-async-init/commits/staging)
+master:[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-async-init/badges/master/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-async-init/commits/master)
 
 Asynchronous initialization and deinitialization decorators for JavaScript/TypeScript applications.
 
