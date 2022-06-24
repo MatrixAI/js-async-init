@@ -944,6 +944,7 @@ describe('CreateDestroyStartStop', () => {
       (async () => {
         const blockingP = x.doSomethingAsyncBlocking();
         await x.doSomethingAsync();
+        // eslint-disable-next-line no-empty
         for await (const _ of x.doSomethingGenAsync()) {
         }
         await blockingP;
@@ -952,6 +953,7 @@ describe('CreateDestroyStartStop', () => {
     await expect(
       (async () => {
         for await (const _ of x.doSomethingGenAsyncBlocking()) {
+          // eslint-disable-next-line no-empty
           for await (const _ of x.doSomethingGenAsync()) {
           }
           await x.doSomethingAsync();
@@ -998,9 +1000,11 @@ describe('CreateDestroyStartStop', () => {
     class X {
       public async start(): Promise<Error> {
         this.doSomethingSync();
+        // eslint-disable-next-line no-empty
         for (const _ of this.doSomethingGenSync()) {
         }
         try {
+          // eslint-disable-next-line no-empty
           for await (const _ of this.doSomethingGenAsync()) {
           }
         } catch (e) {
@@ -1011,9 +1015,11 @@ describe('CreateDestroyStartStop', () => {
 
       public async stop(): Promise<Error> {
         await this.doSomethingAsync();
+        // eslint-disable-next-line no-empty
         for await (const _ of this.doSomethingGenAsync()) {
         }
         try {
+          // eslint-disable-next-line no-empty
           for (const _ of this.doSomethingGenSync()) {
           }
         } catch (e) {
@@ -1023,8 +1029,10 @@ describe('CreateDestroyStartStop', () => {
       }
 
       public async destroy(): Promise<Error> {
+        // eslint-disable-next-line no-empty
         for (const _ of this.doSomethingGenSync()) {
         }
+        // eslint-disable-next-line no-empty
         for await (const _ of this.doSomethingGenAsync()) {
         }
         try {

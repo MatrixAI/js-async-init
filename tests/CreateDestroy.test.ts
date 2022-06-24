@@ -609,6 +609,7 @@ describe('CreateDestroy', () => {
       (async () => {
         const blockingP = x.doSomethingAsyncBlocking();
         await x.doSomethingAsync();
+        // eslint-disable-next-line no-empty
         for await (const _ of x.doSomethingGenAsync()) {
         }
         await blockingP;
@@ -617,6 +618,7 @@ describe('CreateDestroy', () => {
     await expect(
       (async () => {
         for await (const _ of x.doSomethingGenAsyncBlocking()) {
+          // eslint-disable-next-line no-empty
           for await (const _ of x.doSomethingGenAsync()) {
           }
           await x.doSomethingAsync();
@@ -660,8 +662,10 @@ describe('CreateDestroy', () => {
     class X {
       public async destroy(): Promise<Error> {
         this.doSomethingSync();
+        // eslint-disable-next-line no-empty
         for (const _ of this.doSomethingGenSync()) {
         }
+        // eslint-disable-next-line no-empty
         for await (const _ of this.doSomethingGenAsync()) {
         }
         try {
