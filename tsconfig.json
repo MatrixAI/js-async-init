@@ -26,6 +26,11 @@
   "include": [
     "./src/**/*",
     "./src/**/*.json",
-    "./tests/**/*"
-  ]
+    "./tests/**/*",
+    "./scripts/**/*"
+  ],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"],
+    "transpileOnly": true
+  }
 }
