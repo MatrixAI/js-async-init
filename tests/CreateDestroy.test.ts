@@ -20,7 +20,7 @@ describe('CreateDestroy', () => {
     class X {
       public static async createX() {
         createMock();
-        return new X();
+        return new this();
       }
 
       public constructor() {
@@ -71,7 +71,7 @@ describe('CreateDestroy', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        return new Y();
+        return new this();
       }
 
       public async destroy(): Promise<void> {
@@ -111,7 +111,7 @@ describe('CreateDestroy', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        return new Y();
+        return new this();
       }
 
       public async destroy(): Promise<void> {
@@ -154,7 +154,7 @@ describe('CreateDestroy', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        return new Y();
+        return new this();
       }
 
       public async destroy(): Promise<void> {

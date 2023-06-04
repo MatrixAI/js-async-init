@@ -27,7 +27,7 @@ describe('CreateDestroyStartStop', () => {
     class X {
       public static async createX() {
         createMock();
-        const x = new X();
+        const x = new this();
         await x.start();
         return x;
       }
@@ -83,7 +83,7 @@ describe('CreateDestroyStartStop', () => {
     class X {
       public static async createX() {
         createMock();
-        const x = new X();
+        const x = new this();
         await x.start();
         return x;
       }
@@ -112,7 +112,7 @@ describe('CreateDestroyStartStop', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        const y = new Y();
+        const y = new this();
         await y.start();
         return y;
       }
@@ -145,7 +145,7 @@ describe('CreateDestroyStartStop', () => {
     class X {
       public static async createX() {
         createMock();
-        const x = new X();
+        const x = new this();
         await x.start();
         return x;
       }
@@ -175,7 +175,7 @@ describe('CreateDestroyStartStop', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        const y = new Y();
+        const y = new this();
         await y.start();
         return y;
       }
@@ -244,7 +244,7 @@ describe('CreateDestroyStartStop', () => {
     class Y extends X {
       public static async createY() {
         createMock();
-        const y = new Y();
+        const y = new this();
         await y.start();
         return y;
       }

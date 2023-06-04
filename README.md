@@ -28,7 +28,7 @@ class X {
     } = {}
   ) {
     y = y ?? await Y.createY();
-    const x = new X({ y });
+    const x = new this({ y });
     await x.start();
     return x;
   }
@@ -64,7 +64,7 @@ interface Y extends CreateDestroyStartStop {};
 @CreateDestroyStartStop(new Error('Running'), new Error('Destroyed'))
 class Y {
   public static async createY() {
-    return new Y;
+    return new this();
   }
 
   public constructor () {
