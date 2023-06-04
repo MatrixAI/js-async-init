@@ -91,7 +91,7 @@ async function main () {
 main();
 ```
 
-The `start`, `stop`, and `destroy` calls are all concurrent-controlled with `RWLock`. They are idempotent and they are mutually exclusive between each other and any blocking `ready` decorated methods. Decorated methods can block `start`, `stop`, and `destroy`, but share a read lock between each other.
+The `start`, `stop`, and `destroy` calls are all concurrent-controlled with `RWLockWriter`. They are idempotent and they are mutually exclusive between each other and any blocking `ready` decorated methods. Decorated methods can block `start`, `stop`, and `destroy`, but share a read lock between each other.
 
 Refer to https://gist.github.com/CMCDragonkai/1dbf5069d9efc11585c27cc774271584 for further the motivation of this library.
 
