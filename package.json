@@ -22,7 +22,7 @@
     "docs": "shx rm -rf ./docs && typedoc --gitRevision master --tsconfig ./tsconfig.build.json --out ./docs src"
   },
   "dependencies": {
-    "@matrixai/async-locks": "^3.2.0",
+    "@matrixai/async-locks": "^4.0.0",
     "@matrixai/errors": "^1.1.7"
   },
   "devDependencies": {
