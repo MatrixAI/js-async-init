@@ -1,6 +1,6 @@
-export * as types from './types';
-export * as createDestroyStartStop from './CreateDestroyStartStop';
-export * as createDestroy from './CreateDestroy';
-export * as startStop from './StartStop';
-export * as errors from './errors';
-export { running, destroyed, status, initLock } from './utils';
+export * as types from './types.js';
+export * as createDestroyStartStop from './CreateDestroyStartStop.js';
+export * as createDestroy from './CreateDestroy.js';
+export * as startStop from './StartStop.js';
+export * as errors from './errors.js';
+export { running, destroyed, status, initLock } from './utils.js';

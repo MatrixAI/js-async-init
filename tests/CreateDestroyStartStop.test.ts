@@ -1,4 +1,5 @@
 import { Mutex, tryAcquire } from 'async-mutex';
+import * as testsUtils from './utils.js';
 import {
   CreateDestroyStartStop,
   ready,
@@ -6,13 +7,12 @@ import {
   destroyed,
   status,
   initLock,
-} from '@/CreateDestroyStartStop';
+} from '#CreateDestroyStartStop.js';
 import {
   ErrorAsyncInitDestroyed,
   ErrorAsyncInitNotRunning,
   ErrorAsyncInitRunning,
-} from '@/errors';
-import * as testUtils from './utils';
+} from '#errors.js';
 
 describe('CreateDestroyStartStop', () => {
   test('creates, destroys, starts and stops', async () => {
@@ -704,7 +704,7 @@ describe('CreateDestroyStartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -716,7 +716,7 @@ describe('CreateDestroyStartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -728,7 +728,7 @@ describe('CreateDestroyStartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -757,7 +757,7 @@ describe('CreateDestroyStartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -918,7 +918,7 @@ describe('CreateDestroyStartStop', () => {
     class X {
       @ready(undefined, true)
       public async doSomethingAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
       }
 
       @ready(undefined)
@@ -926,9 +926,9 @@ describe('CreateDestroyStartStop', () => {
 
       @ready(undefined, true)
       public async *doSomethingGenAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 1;
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 2;
       }
 

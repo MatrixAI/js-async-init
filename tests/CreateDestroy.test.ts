@@ -1,13 +1,13 @@
 import { Mutex, tryAcquire } from 'async-mutex';
+import * as testsUtils from './utils.js';
 import {
   CreateDestroy,
   ready,
   destroyed,
   status,
   initLock,
-} from '@/CreateDestroy';
-import { ErrorAsyncInitDestroyed } from '@/errors';
-import * as testUtils from './utils';
+} from '#CreateDestroy.js';
+import { ErrorAsyncInitDestroyed } from '#errors.js';
 
 describe('CreateDestroy', () => {
   test('creates, destroys', async () => {
@@ -438,7 +438,7 @@ describe('CreateDestroy', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -584,7 +584,7 @@ describe('CreateDestroy', () => {
     class X {
       @ready(undefined, true)
       public async doSomethingAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
       }
 
       @ready(undefined)
@@ -592,9 +592,9 @@ describe('CreateDestroy', () => {
 
       @ready(undefined, true)
       public async *doSomethingGenAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 1;
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 2;
       }
 

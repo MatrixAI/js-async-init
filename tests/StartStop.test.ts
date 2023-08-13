@@ -1,7 +1,7 @@
 import { Mutex, tryAcquire } from 'async-mutex';
-import { StartStop, ready, running, status, initLock } from '@/StartStop';
-import { ErrorAsyncInitNotRunning } from '@/errors';
-import * as testUtils from './utils';
+import * as testsUtils from './utils.js';
+import { StartStop, ready, running, status, initLock } from '#StartStop.js';
+import { ErrorAsyncInitNotRunning } from '#errors.js';
 
 describe('StartStop', () => {
   test('starts and stops', async () => {
@@ -394,7 +394,7 @@ describe('StartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -406,7 +406,7 @@ describe('StartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -432,7 +432,7 @@ describe('StartStop', () => {
       // if the lock is already locked
       const release = await tryAcquire(lock).acquire();
       // Sleep to ensure enough time for mutual exclusion
-      await testUtils.sleep(100);
+      await testsUtils.sleep(100);
       release();
     });
     await expect(
@@ -575,7 +575,7 @@ describe('StartStop', () => {
     class X {
       @ready(undefined, true)
       public async doSomethingAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
       }
 
       @ready(undefined)
@@ -583,9 +583,9 @@ describe('StartStop', () => {
 
       @ready(undefined, true)
       public async *doSomethingGenAsyncBlocking() {
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 1;
-        await testUtils.sleep(100);
+        await testsUtils.sleep(100);
         yield 2;
       }
 

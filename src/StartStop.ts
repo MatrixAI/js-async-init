@@ -1,4 +1,4 @@
-import type { Status } from './types';
+import type { Status } from './types.js';
 import { RWLockWriter } from '@matrixai/async-locks';
 import {
   _running,
@@ -10,8 +10,8 @@ import {
   GeneratorFunction,
   AsyncGeneratorFunction,
   resetStackTrace,
-} from './utils';
-import { ErrorAsyncInitNotRunning } from './errors';
+} from './utils.js';
+import { ErrorAsyncInitNotRunning } from './errors.js';
 
 interface StartStop<StartReturn = unknown, StopReturn = unknown> {
   get [running](): boolean;
