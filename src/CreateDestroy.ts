@@ -1,4 +1,5 @@
-import type { Status } from './types';
+import type { Status, Class } from './types';
+import { Evented } from '@matrixai/events';
 import { RWLockWriter } from '@matrixai/async-locks';
 import {
   _destroyed,
@@ -11,16 +12,23 @@ import {
   AsyncGeneratorFunction,
   resetStackTrace,
 } from './utils';
+import { EventAsyncInitDestroy, EventAsyncInitDestroyed } from './events';
 import { ErrorAsyncInitDestroyed } from './errors';
 
-interface CreateDestroy<DestroyReturn = unknown> {
+interface CreateDestroy<DestroyReturn = unknown> extends Evented {
   get [destroyed](): boolean;
   get [status](): Status;
   readonly [initLock]: RWLockWriter;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
 
-function CreateDestroy<DestroyReturn = unknown>() {
+function CreateDestroy<DestroyReturn = unknown>({
+  eventDestroy = EventAsyncInitDestroy,
+  eventDestroyed = EventAsyncInitDestroyed,
+}: {
+  eventDestroy?: Class<Event>;
+  eventDestroyed?: Class<Event>;
+} = {}) {
   return <
     T extends {
       new (...args: any[]): {
@@ -29,8 +37,10 @@ function CreateDestroy<DestroyReturn = unknown>() {
     },
   >(
     constructor: T,
-  ) => {
-    const constructor_ = class extends constructor {
+  ): {
+    new (...args: Array<any>): CreateDestroy<DestroyReturn>;
+  } & T => {
+    const constructor_ = class extends Evented()(constructor) {
       public [_destroyed]: boolean = false;
       public [_status]: Status = null;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
@@ -50,11 +60,13 @@ function CreateDestroy<DestroyReturn = unknown>() {
             if (this[_destroyed]) {
               return;
             }
+            this.dispatchEvent(new eventDestroy());
             let result;
             if (typeof super['destroy'] === 'function') {
               result = await super.destroy(...args);
             }
             this[_destroyed] = true;
+            this.dispatchEvent(new eventDestroyed());
             return result;
           } finally {
             this[_status] = null;

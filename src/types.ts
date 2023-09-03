@@ -1,3 +1,5 @@
 type Status = 'destroying' | 'starting' | 'stopping' | null;
 
-export type { Status };
+type Class<T> = new (...args: any[]) => T;
+
+export type { Status, Class };
