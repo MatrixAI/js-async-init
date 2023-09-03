@@ -1,4 +1,5 @@
-import type { Status } from './types.js';
+import type { Status, Class } from './types.js';
+import { Evented } from '@matrixai/events';
 import { RWLockWriter } from '@matrixai/async-locks';
 import {
   _running,
@@ -11,9 +12,16 @@ import {
   AsyncGeneratorFunction,
   resetStackTrace,
 } from './utils.js';
+import {
+  EventAsyncInitStart,
+  EventAsyncInitStarted,
+  EventAsyncInitStop,
+  EventAsyncInitStopped,
+} from './events.js';
 import { ErrorAsyncInitNotRunning } from './errors.js';
 
-interface StartStop<StartReturn = unknown, StopReturn = unknown> {
+interface StartStop<StartReturn = unknown, StopReturn = unknown>
+  extends Evented {
   get [running](): boolean;
   get [status](): Status;
   readonly [initLock]: RWLockWriter;
@@ -21,18 +29,30 @@ interface StartStop<StartReturn = unknown, StopReturn = unknown> {
   stop(...args: Array<any>): Promise<StopReturn | void>;
 }
 
-function StartStop<StartReturn = unknown, StopReturn = unknown>() {
+function StartStop<StartReturn = unknown, StopReturn = unknown>({
+  eventStart = EventAsyncInitStart,
+  eventStarted = EventAsyncInitStarted,
+  eventStop = EventAsyncInitStop,
+  eventStopped = EventAsyncInitStopped,
+}: {
+  eventStart?: Class<Event>;
+  eventStarted?: Class<Event>;
+  eventStop?: Class<Event>;
+  eventStopped?: Class<Event>;
+} = {}) {
   return <
     T extends {
-      new (...args: any[]): {
+      new (...args: Array<any>): {
         start?(...args: Array<any>): Promise<StartReturn | void>;
         stop?(...args: Array<any>): Promise<StopReturn | void>;
       };
     },
   >(
     constructor: T,
-  ) => {
-    const constructor_ = class extends constructor {
+  ): {
+    new (...args: Array<any>): StartStop<StartReturn, StopReturn>;
+  } & T => {
+    const constructor_ = class extends Evented()(constructor) {
       public [_running]: boolean = false;
       public [_status]: Status = null;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
@@ -52,11 +72,13 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>() {
             if (this[_running]) {
               return;
             }
+            this.dispatchEvent(new eventStart());
             let result;
             if (typeof super['start'] === 'function') {
               result = await super.start(...args);
             }
             this[_running] = true;
+            this.dispatchEvent(new eventStarted());
             return result;
           } finally {
             this[_status] = null;
@@ -71,11 +93,13 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>() {
             if (!this[_running]) {
               return;
             }
+            this.dispatchEvent(new eventStop());
             let result;
             if (typeof super['stop'] === 'function') {
               result = await super.stop(...args);
             }
             this[_running] = false;
+            this.dispatchEvent(new eventStopped());
             return result;
           } finally {
             this[_status] = null;

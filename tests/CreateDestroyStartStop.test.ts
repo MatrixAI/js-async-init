@@ -9,6 +9,14 @@ import {
   initLock,
 } from '#CreateDestroyStartStop.js';
 import {
+  EventAsyncInitStart,
+  EventAsyncInitStarted,
+  EventAsyncInitStop,
+  EventAsyncInitStopped,
+  EventAsyncInitDestroy,
+  EventAsyncInitDestroyed,
+} from '#events.js';
+import {
   ErrorAsyncInitDestroyed,
   ErrorAsyncInitNotRunning,
   ErrorAsyncInitRunning,
@@ -1099,5 +1107,74 @@ describe('CreateDestroyStartStop', () => {
     expect(results[5].status).toBe('fulfilled');
     // 5 ops are rejected
     expect(results.slice(6).every((v) => v.status === 'rejected')).toBe(true);
+  });
+  test('start and stop events', async () => {
+    const startMock = jest.fn();
+    const startedMock = jest.fn();
+    const stopMock = jest.fn();
+    const stoppedMock = jest.fn();
+    const destroyMock = jest.fn();
+    const destroyedMock = jest.fn();
+    interface X extends CreateDestroyStartStop {}
+    @CreateDestroyStartStop()
+    class X {}
+    const x = new X();
+    x.addEventListener(EventAsyncInitStart.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('starting');
+      expect(x[running]).toBeFalse();
+      startMock();
+    });
+    x.addEventListener(EventAsyncInitStarted.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('starting');
+      expect(x[running]).toBeTrue();
+      startedMock();
+    });
+    x.addEventListener(EventAsyncInitStop.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('stopping');
+      expect(x[running]).toBeTrue();
+      stopMock();
+    });
+    x.addEventListener(EventAsyncInitStopped.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('stopping');
+      expect(x[running]).toBeFalse();
+      stoppedMock();
+    });
+    x.addEventListener(EventAsyncInitDestroy.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('destroying');
+      expect(x[destroyed]).toBeFalse();
+      destroyMock();
+    });
+    x.addEventListener(EventAsyncInitDestroyed.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('destroying');
+      expect(x[destroyed]).toBeTrue();
+      destroyedMock();
+    });
+    await x.start();
+    expect(startMock.mock.calls.length).toBe(1);
+    expect(startedMock.mock.calls.length).toBe(1);
+    // Idempotent start
+    await x.start();
+    expect(startMock.mock.calls.length).toBe(1);
+    expect(startedMock.mock.calls.length).toBe(1);
+    await x.stop();
+    expect(stopMock.mock.calls.length).toBe(1);
+    expect(stoppedMock.mock.calls.length).toBe(1);
+    // Idempotent stop
+    await x.stop();
+    expect(stopMock.mock.calls.length).toBe(1);
+    expect(stoppedMock.mock.calls.length).toBe(1);
+    await x.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+    expect(destroyedMock.mock.calls.length).toBe(1);
+    // Idempotent destroy
+    await x.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+    expect(destroyedMock.mock.calls.length).toBe(1);
   });
 });

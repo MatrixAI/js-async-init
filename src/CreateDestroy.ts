@@ -1,5 +1,6 @@
-import type { Status } from './types.js';
+import type { Status, Class } from './types.js';
 import { RWLockWriter } from '@matrixai/async-locks';
+import { Evented } from '@matrixai/events';
 import {
   _destroyed,
   destroyed,
@@ -11,26 +12,35 @@ import {
   AsyncGeneratorFunction,
   resetStackTrace,
 } from './utils.js';
+import { EventAsyncInitDestroy, EventAsyncInitDestroyed } from './events.js';
 import { ErrorAsyncInitDestroyed } from './errors.js';
 
-interface CreateDestroy<DestroyReturn = unknown> {
+interface CreateDestroy<DestroyReturn = unknown> extends Evented {
   get [destroyed](): boolean;
   get [status](): Status;
   readonly [initLock]: RWLockWriter;
   destroy(...args: Array<any>): Promise<DestroyReturn | void>;
 }
 
-function CreateDestroy<DestroyReturn = unknown>() {
+function CreateDestroy<DestroyReturn = unknown>({
+  eventDestroy = EventAsyncInitDestroy,
+  eventDestroyed = EventAsyncInitDestroyed,
+}: {
+  eventDestroy?: Class<Event>;
+  eventDestroyed?: Class<Event>;
+} = {}) {
   return <
     T extends {
-      new (...args: any[]): {
+      new (...args: Array<any>): {
         destroy?(...args: Array<any>): Promise<DestroyReturn | void>;
       };
     },
   >(
     constructor: T,
-  ) => {
-    const constructor_ = class extends constructor {
+  ): {
+    new (...args: Array<any>): CreateDestroy<DestroyReturn>;
+  } & T => {
+    const constructor_ = class extends Evented()(constructor) {
       public [_destroyed]: boolean = false;
       public [_status]: Status = null;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
@@ -50,11 +60,13 @@ function CreateDestroy<DestroyReturn = unknown>() {
             if (this[_destroyed]) {
               return;
             }
+            this.dispatchEvent(new eventDestroy());
             let result;
             if (typeof super['destroy'] === 'function') {
               result = await super.destroy(...args);
             }
             this[_destroyed] = true;
+            this.dispatchEvent(new eventDestroyed());
             return result;
           } finally {
             this[_status] = null;

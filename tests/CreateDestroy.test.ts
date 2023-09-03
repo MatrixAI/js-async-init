@@ -7,6 +7,7 @@ import {
   status,
   initLock,
 } from '#CreateDestroy.js';
+import { EventAsyncInitDestroy, EventAsyncInitDestroyed } from '#events.js';
 import { ErrorAsyncInitDestroyed } from '#errors.js';
 
 describe('CreateDestroy', () => {
@@ -729,5 +730,32 @@ describe('CreateDestroy', () => {
     expect(results[5].status).toBe('fulfilled');
     // 5 ops are rejected
     expect(results.slice(6).every((v) => v.status === 'rejected')).toBe(true);
+  });
+  test('destroy events', async () => {
+    const destroyMock = jest.fn();
+    const destroyedMock = jest.fn();
+    interface X extends CreateDestroy {}
+    @CreateDestroy()
+    class X {}
+    const x = new X();
+    x.addEventListener(EventAsyncInitDestroy.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('destroying');
+      expect(x[destroyed]).toBeFalse();
+      destroyMock();
+    });
+    x.addEventListener(EventAsyncInitDestroyed.name, (e) => {
+      expect(e.target).toBe(x);
+      expect(x[status]).toBe('destroying');
+      expect(x[destroyed]).toBeTrue();
+      destroyedMock();
+    });
+    await x.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+    expect(destroyedMock.mock.calls.length).toBe(1);
+    // Idempotent destroy
+    await x.destroy();
+    expect(destroyMock.mock.calls.length).toBe(1);
+    expect(destroyedMock.mock.calls.length).toBe(1);
   });
 });
