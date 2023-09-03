@@ -37,7 +37,8 @@
   },
   "dependencies": {
     "@matrixai/async-locks": "^5.0.1",
-    "@matrixai/errors": "^2.0.1"
+    "@matrixai/errors": "^2.0.1",
+    "@matrixai/events": "^3.0.2"
   },
   "devDependencies": {
     "@swc/core": "^1.3.76",

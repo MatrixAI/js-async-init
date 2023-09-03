@@ -1,4 +1,5 @@
-import type { Status } from './types.js';
+import type { Status, Class } from './types.js';
+import { Evented } from '@matrixai/events';
 import { RWLockWriter } from '@matrixai/async-locks';
 import {
   _running,
@@ -14,6 +15,14 @@ import {
   resetStackTrace,
 } from './utils.js';
 import {
+  EventAsyncInitStart,
+  EventAsyncInitStarted,
+  EventAsyncInitStop,
+  EventAsyncInitStopped,
+  EventAsyncInitDestroy,
+  EventAsyncInitDestroyed,
+} from './events.js';
+import {
   ErrorAsyncInitRunning,
   ErrorAsyncInitNotRunning,
   ErrorAsyncInitDestroyed,
@@ -23,7 +32,7 @@ interface CreateDestroyStartStop<
   StartReturn = unknown,
   StopReturn = unknown,
   DestroyReturn = unknown,
-> {
+> extends Evented {
   get [running](): boolean;
   get [destroyed](): boolean;
   get [status](): Status;
@@ -40,10 +49,25 @@ function CreateDestroyStartStop<
 >(
   errorRunning: Error = new ErrorAsyncInitRunning(),
   errorDestroyed: Error = new ErrorAsyncInitDestroyed(),
+  {
+    eventStart = EventAsyncInitStart,
+    eventStarted = EventAsyncInitStarted,
+    eventStop = EventAsyncInitStop,
+    eventStopped = EventAsyncInitStopped,
+    eventDestroy = EventAsyncInitDestroy,
+    eventDestroyed = EventAsyncInitDestroyed,
+  }: {
+    eventStart?: Class<Event>;
+    eventStarted?: Class<Event>;
+    eventStop?: Class<Event>;
+    eventStopped?: Class<Event>;
+    eventDestroy?: Class<Event>;
+    eventDestroyed?: Class<Event>;
+  } = {},
 ) {
   return <
     T extends {
-      new (...args: any[]): {
+      new (...args: Array<any>): {
         start?(...args: Array<any>): Promise<StartReturn | void>;
         stop?(...args: Array<any>): Promise<StopReturn | void>;
         destroy?(...args: Array<any>): Promise<DestroyReturn | void>;
@@ -51,8 +75,12 @@ function CreateDestroyStartStop<
     },
   >(
     constructor: T,
-  ) => {
-    const constructor_ = class extends constructor {
+  ): {
+    new (
+      ...args: Array<any>
+    ): CreateDestroyStartStop<StartReturn, StopReturn, DestroyReturn>;
+  } & T => {
+    const constructor_ = class extends Evented()(constructor) {
       public [_running]: boolean = false;
       public [_destroyed]: boolean = false;
       public [_status]: Status = null;
@@ -82,11 +110,13 @@ function CreateDestroyStartStop<
               resetStackTrace(errorRunning);
               throw errorRunning;
             }
+            this.dispatchEvent(new eventDestroy());
             let result;
             if (typeof super['destroy'] === 'function') {
               result = await super.destroy(...args);
             }
             this[_destroyed] = true;
+            this.dispatchEvent(new eventDestroyed());
             return result;
           } finally {
             this[_status] = null;
@@ -106,11 +136,13 @@ function CreateDestroyStartStop<
               resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
+            this.dispatchEvent(new eventStart());
             let result;
             if (typeof super['start'] === 'function') {
               result = await super.start(...args);
             }
             this[_running] = true;
+            this.dispatchEvent(new eventStarted());
             return result;
           } finally {
             this[_status] = null;
@@ -132,11 +164,13 @@ function CreateDestroyStartStop<
               resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
+            this.dispatchEvent(new eventStop());
             let result;
             if (typeof super['stop'] === 'function') {
               result = await super.stop(...args);
             }
             this[_running] = false;
+            this.dispatchEvent(new eventStopped());
             return result;
           } finally {
             this[_status] = null;
