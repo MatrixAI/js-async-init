@@ -1,6 +1,6 @@
 import { AbstractEvent } from '@matrixai/events';
 
-abstract class EventAsyncInit<T = null> extends AbstractEvent<T> {}
+abstract class EventAsyncInit extends AbstractEvent {}
 
 class EventAsyncInitStart extends EventAsyncInit {}
 
