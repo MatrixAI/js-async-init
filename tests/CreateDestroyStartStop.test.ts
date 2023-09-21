@@ -430,29 +430,28 @@ describe('CreateDestroyStartStop', () => {
     await expect(
       async () => await x.doSomethingGenAsync().next(),
     ).rejects.toThrow(ErrorAsyncInitNotRunning);
-    // Also not ready during idempotent `x.start`
+    // Make it ready!
     await x.start();
+    // Idempotently running
     const startP = x.start();
-    expect(x.doSomethingSync.bind(x)).toThrow(ErrorAsyncInitNotRunning);
-    await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(
-      ErrorAsyncInitNotRunning,
-    );
-    expect(() => x.doSomethingGenSync().next()).toThrow(
+    expect(x.doSomethingSync.bind(x)).not.toThrow(ErrorAsyncInitNotRunning);
+    await expect(x.doSomethingAsync.bind(x)()).resolves.toBeUndefined();
+    expect(() => x.doSomethingGenSync().next()).not.toThrow(
       ErrorAsyncInitNotRunning,
     );
     await expect(
-      async () => await x.doSomethingGenAsync().next(),
-    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+      (async () => await x.doSomethingGenAsync().next())(),
+    ).resolves.toEqual({ done: true, value: undefined });
     await startP;
     // Ready
     x.doSomethingSync();
     await x.doSomethingAsync();
     x.doSomethingGenSync().next();
     await x.doSomethingGenAsync().next();
-    expect(doSomethingAsyncMock.mock.calls.length).toBe(1);
-    expect(doSomethingSyncMock.mock.calls.length).toBe(1);
-    expect(doSomethingGenSyncMock.mock.calls.length).toBe(1);
-    expect(doSomethingGenAsyncMock.mock.calls.length).toBe(1);
+    expect(doSomethingAsyncMock.mock.calls.length).toBe(2);
+    expect(doSomethingSyncMock.mock.calls.length).toBe(2);
+    expect(doSomethingGenSyncMock.mock.calls.length).toBe(2);
+    expect(doSomethingGenAsyncMock.mock.calls.length).toBe(2);
     await x.stop();
     // Not ready
     await expect(x.doSomethingAsync.bind(x)).rejects.toThrow(
@@ -519,7 +518,7 @@ describe('CreateDestroyStartStop', () => {
         x.doSomethingSync();
         await stop;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    ).resolves.toBeUndefined();
     await x.start();
     await expect(
       (async () => {
@@ -535,7 +534,7 @@ describe('CreateDestroyStartStop', () => {
         x.doSomethingGenSync().next();
         await stop;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    ).resolves.toBeUndefined();
     await x.start();
     await expect(
       (async () => {
@@ -618,7 +617,7 @@ describe('CreateDestroyStartStop', () => {
         x.a;
         await stop;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    ).resolves.toBeUndefined();
     await x.start();
     await expect(
       (async () => {
@@ -626,7 +625,7 @@ describe('CreateDestroyStartStop', () => {
         x.b = 10;
         await stop;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitNotRunning);
+    ).resolves.toBeUndefined();
     await x.start();
     x.b = 10;
     expect(x.a).toBe('a');

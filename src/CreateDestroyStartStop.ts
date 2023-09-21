@@ -8,10 +8,14 @@ import {
   destroyed,
   _status,
   status,
+  _statusP,
+  statusP,
+  resolveStatusP,
   initLock,
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
+  promise,
   resetStackTrace,
 } from './utils';
 import {
@@ -36,6 +40,7 @@ interface CreateDestroyStartStop<
   get [running](): boolean;
   get [destroyed](): boolean;
   get [status](): Status;
+  get [statusP](): Promise<Status>;
   readonly [initLock]: RWLockWriter;
   start(...args: Array<any>): Promise<StartReturn | void>;
   stop(...args: Array<any>): Promise<StopReturn | void>;
@@ -82,10 +87,13 @@ function CreateDestroyStartStop<
       DestroyReturn
     >;
   } & T => {
+    const { p, resolveP } = promise<Status>();
     const constructor_ = class extends Evented()(constructor) {
       public [_running]: boolean = false;
       public [_destroyed]: boolean = false;
       public [_status]: Status = null;
+      public [_statusP]: Promise<Status> = p;
+      public [resolveStatusP]: (status: Status) => void = resolveP;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
 
       public get [running](): boolean {
@@ -100,10 +108,13 @@ function CreateDestroyStartStop<
         return this[_status];
       }
 
+      public get [statusP](): Promise<Status> {
+        return this[_statusP];
+      }
+
       public async destroy(...args: Array<any>): Promise<DestroyReturn | void> {
-        return this[initLock].withWriteF(async () => {
-          this[_status] = 'destroying';
-          try {
+        return this[initLock]
+          .withWriteF(async () => {
             if (this[_destroyed]) {
               return;
             }
@@ -112,6 +123,11 @@ function CreateDestroyStartStop<
               resetStackTrace(errorRunning);
               throw errorRunning;
             }
+            this[_status] = 'destroying';
+            this[resolveStatusP]('destroying');
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
             this.dispatchEvent(new eventDestroy());
             let result;
             if (typeof super['destroy'] === 'function') {
@@ -120,16 +136,19 @@ function CreateDestroyStartStop<
             this[_destroyed] = true;
             this.dispatchEvent(new eventDestroyed());
             return result;
-          } finally {
+          })
+          .finally(() => {
             this[_status] = null;
-          }
-        });
+            this[resolveStatusP](null);
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
+          });
       }
 
       public async start(...args: Array<any>): Promise<StartReturn | void> {
-        return this[initLock].withWriteF(async () => {
-          this[_status] = 'starting';
-          try {
+        return this[initLock]
+          .withWriteF(async () => {
             if (this[_running]) {
               return;
             }
@@ -138,6 +157,11 @@ function CreateDestroyStartStop<
               resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
+            this[_status] = 'starting';
+            this[resolveStatusP]('starting');
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
             this.dispatchEvent(new eventStart());
             let result;
             if (typeof super['start'] === 'function') {
@@ -146,16 +170,19 @@ function CreateDestroyStartStop<
             this[_running] = true;
             this.dispatchEvent(new eventStarted());
             return result;
-          } finally {
+          })
+          .finally(() => {
             this[_status] = null;
-          }
-        });
+            this[resolveStatusP](null);
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
+          });
       }
 
       public async stop(...args: Array<any>): Promise<StopReturn | void> {
-        return this[initLock].withWriteF(async () => {
-          this[_status] = 'stopping';
-          try {
+        return this[initLock]
+          .withWriteF(async () => {
             if (!this[_running]) {
               return;
             }
@@ -166,6 +193,11 @@ function CreateDestroyStartStop<
               resetStackTrace(errorDestroyed);
               throw errorDestroyed;
             }
+            this[_status] = 'stopping';
+            this[resolveStatusP]('stopping');
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
             this.dispatchEvent(new eventStop());
             let result;
             if (typeof super['stop'] === 'function') {
@@ -174,10 +206,14 @@ function CreateDestroyStartStop<
             this[_running] = false;
             this.dispatchEvent(new eventStopped());
             return result;
-          } finally {
+          })
+          .finally(() => {
             this[_status] = null;
-          }
-        });
+            this[resolveStatusP](null);
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
+          });
       }
     };
     // Preserve the name
@@ -210,6 +246,11 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
+        // If it is write locked, wait until the status has changed
+        // This method may be called in between write locked and status change
+        if (this[initLock].isLocked('write') && this[_status] === null) {
+          await this[_statusP];
+        }
         if (allowedStatuses.includes(this[_status])) {
           return f.apply(this, args);
         }
@@ -234,7 +275,10 @@ function ready(
         if (allowedStatuses.includes(this[_status])) {
           return yield* f.apply(this, args);
         }
-        if (this[initLock].isLocked('write') || !this[_running]) {
+        if (
+          (this[initLock].isLocked('write') && this[status] !== null) ||
+          !this[_running]
+        ) {
           resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
@@ -242,6 +286,11 @@ function ready(
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
+        // If it is write locked, wait until the status has changed
+        // This method may be called in between write locked and status change
+        if (this[initLock].isLocked('write') && this[_status] === null) {
+          await this[_statusP];
+        }
         if (allowedStatuses.includes(this[_status])) {
           return yield* f.apply(this, args);
         }
@@ -266,7 +315,10 @@ function ready(
         if (allowedStatuses.includes(this[_status])) {
           return f.apply(this, args);
         }
-        if (this[initLock].isLocked('write') || !this[_running]) {
+        if (
+          (this[initLock].isLocked('write') && this[status] !== null) ||
+          !this[_running]
+        ) {
           resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
@@ -279,4 +331,12 @@ function ready(
   };
 }
 
-export { CreateDestroyStartStop, ready, running, destroyed, status, initLock };
+export {
+  CreateDestroyStartStop,
+  ready,
+  running,
+  destroyed,
+  status,
+  statusP,
+  initLock,
+};

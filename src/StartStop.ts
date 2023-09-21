@@ -6,10 +6,14 @@ import {
   running,
   _status,
   status,
+  _statusP,
+  statusP,
+  resolveStatusP,
   initLock,
   AsyncFunction,
   GeneratorFunction,
   AsyncGeneratorFunction,
+  promise,
   resetStackTrace,
 } from './utils';
 import {
@@ -24,6 +28,7 @@ interface StartStop<StartReturn = unknown, StopReturn = unknown>
   extends Evented {
   get [running](): boolean;
   get [status](): Status;
+  get [statusP](): Promise<Status>;
   readonly [initLock]: RWLockWriter;
   start(...args: Array<any>): Promise<StartReturn | void>;
   stop(...args: Array<any>): Promise<StopReturn | void>;
@@ -52,9 +57,12 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>({
   ): {
     new (...args: Array<any>): StartStop<StartReturn, StopReturn>;
   } & T => {
+    const { p, resolveP } = promise<Status>();
     const constructor_ = class extends Evented()(constructor) {
       public [_running]: boolean = false;
       public [_status]: Status = null;
+      public [_statusP]: Promise<Status> = p;
+      public [resolveStatusP]: (status: Status) => void = resolveP;
       public readonly [initLock]: RWLockWriter = new RWLockWriter();
 
       public get [running](): boolean {
@@ -65,13 +73,21 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>({
         return this[_status];
       }
 
+      public get [statusP](): Promise<Status> {
+        return this[_statusP];
+      }
+
       public async start(...args: Array<any>): Promise<StartReturn | void> {
-        return this[initLock].withWriteF(async () => {
-          this[_status] = 'starting';
-          try {
+        return this[initLock]
+          .withWriteF(async () => {
             if (this[_running]) {
               return;
             }
+            this[_status] = 'starting';
+            this[resolveStatusP]('starting');
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
             this.dispatchEvent(new eventStart());
             let result;
             if (typeof super['start'] === 'function') {
@@ -80,19 +96,27 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>({
             this[_running] = true;
             this.dispatchEvent(new eventStarted());
             return result;
-          } finally {
+          })
+          .finally(() => {
             this[_status] = null;
-          }
-        });
+            this[resolveStatusP](null);
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
+          });
       }
 
       public async stop(...args: Array<any>): Promise<StopReturn | void> {
-        return this[initLock].withWriteF(async () => {
-          this[_status] = 'stopping';
-          try {
+        return this[initLock]
+          .withWriteF(async () => {
             if (!this[_running]) {
               return;
             }
+            this[_status] = 'stopping';
+            this[resolveStatusP]('stopping');
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
             this.dispatchEvent(new eventStop());
             let result;
             if (typeof super['stop'] === 'function') {
@@ -101,10 +125,14 @@ function StartStop<StartReturn = unknown, StopReturn = unknown>({
             this[_running] = false;
             this.dispatchEvent(new eventStopped());
             return result;
-          } finally {
+          })
+          .finally(() => {
             this[_status] = null;
-          }
-        });
+            this[resolveStatusP](null);
+            const { p, resolveP } = promise<Status>();
+            this[_statusP] = p;
+            this[resolveStatusP] = resolveP;
+          });
       }
     };
     // Preserve the name
@@ -137,6 +165,11 @@ function ready(
     }
     if (f instanceof AsyncFunction) {
       descriptor[kind] = async function (...args) {
+        // If it is write locked, wait until the status has changed
+        // This method may be called in between write locked and status change
+        if (this[initLock].isLocked('write') && this[_status] === null) {
+          await this[_statusP];
+        }
         if (allowedStatuses.includes(this[_status])) {
           return f.apply(this, args);
         }
@@ -161,7 +194,10 @@ function ready(
         if (allowedStatuses.includes(this[_status])) {
           return yield* f.apply(this, args);
         }
-        if (this[initLock].isLocked('write') || !this[_running]) {
+        if (
+          (this[initLock].isLocked('write') && this[status] !== null) ||
+          !this[_running]
+        ) {
           resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
@@ -169,6 +205,11 @@ function ready(
       };
     } else if (f instanceof AsyncGeneratorFunction) {
       descriptor[kind] = async function* (...args) {
+        // If it is write locked, wait until the status has changed
+        // This method may be called in between write locked and status change
+        if (this[initLock].isLocked('write') && this[_status] === null) {
+          await this[_statusP];
+        }
         if (allowedStatuses.includes(this[_status])) {
           return yield* f.apply(this, args);
         }
@@ -193,7 +234,10 @@ function ready(
         if (allowedStatuses.includes(this[_status])) {
           return f.apply(this, args);
         }
-        if (this[initLock].isLocked('write') || !this[_running]) {
+        if (
+          (this[initLock].isLocked('write') && this[status] !== null) ||
+          !this[_running]
+        ) {
           resetStackTrace(errorNotRunning, descriptor[kind]);
           throw errorNotRunning;
         }
@@ -206,4 +250,4 @@ function ready(
   };
 }
 
-export { StartStop, ready, running, status, initLock };
+export { StartStop, ready, running, status, statusP, initLock };

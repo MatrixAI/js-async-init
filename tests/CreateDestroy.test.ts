@@ -314,7 +314,7 @@ describe('CreateDestroy', () => {
         x.doSomethingSync();
         await destroy;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    ).resolves.toBeUndefined();
     await expect(
       (async () => {
         const x = new X();
@@ -330,7 +330,7 @@ describe('CreateDestroy', () => {
         x.doSomethingGenSync().next();
         await destroy;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    ).resolves.toBeUndefined();
     await expect(
       (async () => {
         const x = new X();
@@ -380,7 +380,7 @@ describe('CreateDestroy', () => {
         x.a;
         await destroy;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    ).resolves.toBeUndefined();
     await expect(
       (async () => {
         const x = new X();
@@ -388,7 +388,7 @@ describe('CreateDestroy', () => {
         x.b = 10;
         await destroy;
       })(),
-    ).rejects.toThrow(ErrorAsyncInitDestroyed);
+    ).resolves.toBeUndefined();
   });
   test('custom running, not running and destroyed exceptions', async () => {
     const errorDestroyed = new Error('destroyed');
@@ -484,7 +484,7 @@ describe('CreateDestroy', () => {
         x.doSomethingSync();
         await destroy;
       })(),
-    ).rejects.toThrow(errorDestroyed);
+    ).resolves.toBeUndefined();
     await expect(
       (async () => {
         const x = new X();
@@ -500,7 +500,7 @@ describe('CreateDestroy', () => {
         x.doSomethingGenSync().next();
         await destroy;
       })(),
-    ).rejects.toThrow(errorDestroyed);
+    ).resolves.toBeUndefined();
     await expect(
       (async () => {
         const x = new X();
